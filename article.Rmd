@@ -1,0 +1,89 @@
+---
+title: "Practical Application of MST"
+description: |
+  A practical guide to design and development of computerised multistage tests.
+author:
+  - name: James Page
+    affiliation: SP Educational Consulting
+    affiliation_url: https://www.speduconsulting.co.uk/
+date: "`r Sys.Date()`"
+bibliography: references.bib
+output: distill::distill_article
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Introduction and Overview
+Computerised multistage tests (MSTs) have grown in popularity in recent years because of their advantages of flexibility and simplicity over linear and computerised adaptive test (CATs). A growing body of academic literature is available for researchers, but the practicalities of using MST for design and delivery of real-world tests is difficult to find. I hope this article provides a useful guide to the practical work of test creation and delivery.
+
+The advantages of splitting tests up into units of items called *modules* and directing candidates to modules based on their latent ability scores are a more efficient (and shorter) test delivery than a linear test, ease of assembly, and greater protection against test copying.
+
+I'll assume some familiarity with the IRT or Item Response Theory (at least with Rasch analysis), although I provide a brief summary below. Also some competence with R programming would be useful to understand the examples given. For background information and primers on these subjects I provide references.
+
+My main focus is the development of tests for language learners, specifically English language learners. The theory and data processing involved can easily be transferred to other domains that require measurement of latent ability. The IRT model that I focus on is the 1PL (or Rasch) model. For readers interested in extending analysis to more complex models, see [@magis2017computerized].
+
+## Introduction to Item Response Theory
+The underlying theoretical basis for MST is the branch of psychometrics known as Item Response Theory, or IRT. The theory proposes that there are *latent traits* (for example language ability) that can be measured using a set of tests delivered to the test candidate. These test items are typically scored as correct (1) or incorrect (0) - and it these dichotomous test types that we focus on here. The response to the test items can then be use to estimate the latent trait by fitting an IRT model.
+
+### The Rasch Model
+The simplest such model, the so-called *Rasch model*, relies on a single variable parameter, the difficulty parameter (usually designated as $b$). For this reason it is also known as the one-parameter logistic model (1PL). The *item response function* (IRF) for this model uses a logistic function to model the probability of a correct response for candidate $i$ taking test item $j$:
+
+$$
+Pr(X_{ij} = 1|\theta_{i},b_{j}) = \frac{exp(\theta_{i} - b_{j})}{1+exp(\theta_{i} - b_{j})}
+$$
+Here $X$ is the item response (either 1 or 0), $\theta$ represents the latent ability being measured, and $b$ represents the difficulty of the item. Certain assumptions are made by the model, most importantly:
+
+* Each item targets one and only one latent trait
+* The items are independent of one another
+* The response probability increases with the ability level using a logistic cumulative distribution function
+
+This S-shaped function can be seen below for three test items with different difficulties.
+
+![Logistic Function](images/icc.png)
+There is an equivalence between $\theta$ and $b$ such that a candidate with mean ability ($\theta = 0$) would be expected to get item US065_1 (green) correct with a probability of 0.28. The less difficult item US070_1 (black) would see a probability of around 0.95 for a correct response. Item US070_1 (red) is somewhere in between the two in terms of difficulty. You could also read this as stating that candidates who have a $\theta$ of 0.82 show a 50-50 chance of getting US065_1 correct. The difficulty parameter $b$ is set at this point, so we'd assign a difficulty of 0.82 to item US065_1 in our test. And assuming a normal distribution of candidates, items with difficulty 0 would expect to be answered correctly by 50% of candidates.
+
+## IRT for Mulitstage Test Design
+IRT is used to inform calibration of the test items after they've been developed by subject matter experts, as well as construction of the modules and routing between them. Scoring of the test can be derived from the $\theta$ estimates. Typically the initial module (known as the routing module) will have an overall difficulty of 0 (ie. a mix of easy and hard items), with subsequent routing directing candidates to easier or more difficult modules in order to 'hone in' on an accurate $\theta$ estimate at the end of the test.
+
+A typical modular design can look like this:
+
+![MST Design](images/modules.png)
+
+
+
+
+Item-banking
+Assembly
+Estimation
+Scoring
+Linking
+Equating
+
+3. Data Sources and Management
+	- The Item Bank
+	- The CIS
+	- Test response format
+	- Data management and validation
+
+4. MST Design Considerations
+	- Terminology
+	- Benefits
+	- Design
+
+5. Initial Simulation
+	- Design test and validation
+
+6. Trialling and Test Validation
+	- Item Writing and Intial Validation
+	- Trialling
+	- Import and validation of trial data
+	- Updating the item bank
+	- Other outputs
+
+7. Summary
+
+8. Bibliography
+
+
