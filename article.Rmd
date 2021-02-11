@@ -1,5 +1,5 @@
 ---
-title: "Practical Application of MST"
+title: "The Practical Application of MST"
 description: |
   A practical guide to design and development of computerised multistage tests.
 author:
@@ -16,11 +16,11 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 # Introduction and Overview
-Computerised multistage tests (MSTs) have grown in popularity in recent years because of their advantages of flexibility and simplicity over linear and computerised adaptive test (CATs). A growing body of academic literature is available for researchers, but the practicalities of using MST for design and delivery of real-world tests is difficult to find. I hope this article provides a useful guide to the practical work of test creation and delivery.
+Computerised multistage tests (MSTs) have grown in popularity in recent years due to their advantages of flexibility and simplicity over linear and computerised adaptive tests (CATs). A growing body of academic literature is available for researchers, but the practicalities of using MST for design and delivery of real-world tests is still difficult to find. I hope this article provides a useful guide to the practical work of test creation and delivery.
 
-The advantages of splitting tests up into units of items called *modules* and directing candidates to modules based on their latent ability scores are a more efficient (and shorter) test delivery than a linear test, ease of assembly, and greater protection against test copying.
+The advantages of splitting tests up into units of items called *modules* and directing candidates to modules based on their latent ability scores, provides a more efficient (and shorter) test delivery than a corresponding linear test, while also offering an easier method of assembly, and greater protection against test copying.
 
-I'll assume some familiarity with the IRT or Item Response Theory (at least with Rasch analysis), although I provide a brief summary below. Also some competence with R programming would be useful to understand the examples given. For background information and primers on these subjects I provide references.
+I'll assume some familiarity with IRT or Item Response Theory (at least with Rasch analysis), although I provide a brief summary below. Also some competence with R programming would be useful to understand the examples given. For background information and primers on these subjects I provide references.
 
 My main focus is the development of tests for language learners, specifically English language learners. The theory and data processing involved can easily be transferred to other domains that require measurement of latent ability. The IRT model that I focus on is the 1PL (or Rasch) model. For readers interested in extending analysis to more complex models, see [@magis2017computerized].
 
@@ -51,9 +51,7 @@ A typical modular design can look like this:
 
 ![MST Design](images/modules.png)
 
-
-
-
+## Extra Background Info?
 Item-banking
 Assembly
 Estimation
@@ -61,18 +59,31 @@ Scoring
 Linking
 Equating
 
-3. Data Sources and Management
-	- The Item Bank
-	- The CIS
-	- Test response format
-	- Data management and validation
+## Data Sources and Management
 
-4. MST Design Considerations
+In order to perform a simulated test, there are a number of different data sources that are required. 
+
+The first class of these data sources is the one that is used to store item information. The key entities to store here:
+
+* Items
+* Modules
+* Panels
+
+Items are aggregated into Modules, and Modules are grouped into Panels. A Panel is a set of Modules that can be delivered as a test instance. Note that it is possible for Items to be placed in more than one Panel (although an Item should not be duplicated in the same Panel).
+
+In addition to the item information, another data source is used for the candidate information. This forms the candidate information service that will be used for the test. In addition to storing a unique candidate ID, additional metadata of interest (such as the candidate's length of study or L1) may be held by the candidate information service.
+
+Finally, test response data is required. Essentially this is a matrix containing rows of candidates and columns of items. Cells will conatain a 1 (item answered correctly) or a 0 (item answered incorrectly). Items that were not presented (for example, from a module that was not in the test path for a candidate) are left blank and will be classed as NAs.
+
+This data may be stored as flat files (in CSV format for instance), or held in database tables, or in a mix of different sources. Typically you would want to stored them in a cloud storage system (for example in AWS S3 buckets or AWS RDS datbases) to ensure that the data is stored in a way that is secure, accessible and geographically distributed (for resilience).
+
+## MST Design Considerations?
 	- Terminology
 	- Benefits
 	- Design
 
-5. Initial Simulation
+## Initial Simulation
+
 	- Design test and validation
 
 6. Trialling and Test Validation
