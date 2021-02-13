@@ -20,7 +20,9 @@ Computerised multistage tests (MSTs) have grown in popularity in recent years du
 
 The advantages of splitting tests up into units of items called *modules* and directing candidates to modules based on their latent ability scores, provides a more efficient (and shorter) test delivery than a corresponding linear test, while also offering an easier method of assembly, and greater protection against test copying.
 
-I'll assume some familiarity with IRT or Item Response Theory (at least with Rasch analysis), although I provide a brief summary below. Also some competence with R programming would be useful to understand the examples given. For background information and primers on these subjects I provide references.
+I'll assume some familiarity with
+
+ IRT or Item Response Theory (at least with Rasch analysis), although I provide a brief summary below. Also some competence with R programming would be useful to understand the examples given. For background information and primers on these subjects I provide references.
 
 My main focus is the development of tests for language learners, specifically English language learners. The theory and data processing involved can easily be transferred to other domains that require measurement of latent ability. The IRT model that I focus on is the 1PL (or Rasch) model. For readers interested in extending analysis to more complex models, see [@magis2017computerized].
 
