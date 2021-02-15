@@ -16,6 +16,7 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 # Introduction and Overview
+
 Computerised multistage tests (MSTs) have grown in popularity in recent years due to their advantages of flexibility and simplicity over linear and computerised adaptive tests (CATs). A growing body of academic literature is available for researchers, but the practicalities of using MST for design and delivery of real-world tests is still difficult to find. I hope this article provides a useful guide to the practical work of test creation and delivery.
 
 The advantages of splitting tests up into units of items called *modules* and directing candidates to modules based on their latent ability scores, provides a more efficient (and shorter) test delivery than a corresponding linear test, while also offering an easier method of assembly, and greater protection against test copying.
@@ -56,17 +57,13 @@ A typical modular design can look like this:
 
 ![MST Design](images/modules.png)
 
-## Extra Background Info?
-Item-banking
-Assembly
-Estimation
-Scoring
-Linking
-Equating
+This is an example of a 1-2-4 design, but others are possible. An important question to answer during test design, is the module topology and the overall difficulty level for each module (represented as the mean item difficulty, $\bar{b}$).
+
+In the pre-trial stage, its possible to run simulations to help us answer these questions.
 
 ## Data Sources and Management
 
-In order to perform a simulated test, there are a number of different data sources that are required. 
+In order to perform a simulated test, there are a number of different data sources that are required.
 
 The first class of these data sources is the one that is used to store item information. The key entities to store here:
 
@@ -84,11 +81,9 @@ This data may be stored as flat files (in CSV format for instance), or held in d
 
 ## MST Design Considerations
 
-I mentioned earlier that multi-stage test designs comprise a number of modules arranged into stages. The question then becomes, how many stages do I need, and how many modules in each stage? The simplest design is a 1-2-3 design, laid out like this:
+I mentioned earlier that multi-stage test designs comprise a number of modules arranged into stages. The question then becomes, how many stages do I need, and how many modules in each stage? We saw earlier an example of a simple 1-2-4 design.
 
-<<TODO _ 1-2-3 design >>
-
-However, this design may not be sufficient for your needs. You need to consider whether there are groups of items that naturally fit into a particular stage (for example, seperating reading or listening tasks into seperate stages). You also need to consider how many items per stage you want to have. Also, in order for the routing between modules to produce acceptable results, you need to consider the relative difficulty of each module.
+This design may not be sufficient for your needs. You need to consider whether there are groups of items that naturally fit into a particular stage (for example, seperating reading or listening tasks into seperate stages). You also need to consider how many items per stage you want to have. Also, in order for the routing between modules to produce acceptable results, you need to consider the relative difficulty of each module.
 
 Normally the so-called routing module in stage 1 (Module A) would contain a mix of items with a mean difficulty of 0 (in other words 'medium' difficulty). Candidates that are placed in the lower ability range at the end of this module will be routed to the 'easy' module in stage 2 (Module B), and those in the upper ability range to the 'hard' module (Module C).
 
@@ -98,6 +93,65 @@ An initial simulation of your test to try out designs can be done by using the `
 
 The `mstR` library can take an existing set of item responses, or you can use it to generate a set of randomised simulated item responses. This latter ability is useful in the pre-trial stage where we're interested in finding out how routing between modules should be established, or to validate assumptions in the test design.
 
+The aim here is to sift several different test designs; and re-run simulations easily.
+
+### Module Setup
+
+With `mstR` we can define:
+
+* the module topology (number of stages and modules per stage)
+* the number of items per module and the module difficulty
+* the IRT model to use
+
+If we start out with the 1-2-4 design shown above, based on our test requirements, we can create a simultion for the test design with the following elements:
+
+* a simulated item bank, `it.MST`
+* the modules and the items they contain, `modules`
+* the routing runes in the transition matrix `routing`
+
+```{r module difficulties}
+library(mstR)
+
+it.MST <- rbind(genDichoMatrix(12, model = "1PL", bPrior = c("norm", 0.0, 1)),
+	genDichoMatrix(8, model = "1PL", bPrior = c("norm", -1.0, 1)),
+	genDichoMatrix(8, model = "1PL", bPrior = c("norm", 1.0, 1)),
+	genDichoMatrix(10, model = "1PL", bPrior = c("norm", -1.5, 1)),
+	genDichoMatrix(10, model = "1PL", bPrior = c("norm", -0.5, 1)),
+	genDichoMatrix(10, model = "1PL", bPrior = c("norm", 0.5, 1)),
+	genDichoMatrix(10, model = "1PL", bPrior = c("norm", 1.5, 1)))
+it.MST <- as.matrix(it.MST)
+```
+
+Here we've decided to use the 1PL (or Rasch) model, so we need to supply `bPrior` difficulty distributions, and convert the data frame into a matrix. We'll end up with a matrix of 68 items, each with randomised difficulty parameters.
+
+Fitting these items into the modules is done by creating another matrix with 68 rows (items) and 7 columns (modules); a cell containing a 1 indicates membership of an item in a module.
+
+```{r module items}
+modules <- matrix(0, 68, 7)
+modules[1:12, 1] <- 1
+modules[13:20, 2] <- 1
+modules[21:28, 3] <- 1
+modules[29:38, 4] <- 1
+modules[39:48, 5] <- 1
+modules[49:58, 6] <- 1
+modules[59:68, 7] <- 1
+```
+
+The final part of the design activity is construction of the routing rules, which is done by creating an $R \times R$ *transition matrix* which shows the valid paths to modules in the next stage and where $R$ is the number of modules. A value of 1 indicates that a path exists from module $i$ to module $j$ in the matrix.
+
+```{r module routing}
+routing <- matrix(0, 7, 7)
+routing[1, 2:3] <- 1
+routing[2, 4:6] <- 1
+routing[3, 5:7] <- 1
+
+print(routing)
+```
+
+As can be seen, modules 4-7 (Module D to Module G in the design) are final stage modules, so do not route onward.
+
+
+See chapter 7 of [@magis2017computerized] for details, or check out the [CRAN page](https://cran.r-project.org/web/packages/mstR/index.html) for `mstR`.
 
 
 
