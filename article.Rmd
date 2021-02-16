@@ -1,7 +1,7 @@
 ---
 title: "The Practical Application of MST"
 description: |
-  A practical guide to design and development of computerised multistage tests.
+  A practical guide to the design and development of computerised multistage tests.
 author:
   - name: James Page
     affiliation: SP Educational Consulting
@@ -17,11 +17,11 @@ knitr::opts_chunk$set(echo = FALSE)
 
 # Introduction and Overview
 
-Computerised multistage tests (MSTs) have grown in popularity in recent years due to their advantages of flexibility and simplicity over linear and computerised adaptive tests (CATs). A growing body of academic literature is available for researchers, but the practicalities of using MST for design and delivery of real-world tests is still difficult to find. I hope this article provides a useful guide to the practical work of test creation and delivery.
+Computerised multistage tests (MSTs) have grown in popularity in recent years due to their advantages of flexibility and simplicity over linear and computerised adaptive tests (CATs). A growing body of academic literature is available for researchers, however the practicalities of using MST for the design and delivery of real-world tests is still difficult to access I hope this article provides a useful practical guide to test design and delivery.
 
 The advantages of splitting tests up into units of items called *modules* and directing candidates to modules based on their latent ability scores, provides a more efficient (and shorter) test delivery than a corresponding linear test, while also offering an easier method of assembly, and greater protection against test copying.
 
-I'll assume some familiarity with Item Response Theory (IRT) - and the Rasch model. Also some competence with R programming would be useful to understand the examples given. For background information and primers on these subjects I provide references.
+I'll assume some familiarity with Item Response Theory (IRT) - and the Rasch model. Some knowledge of programming with R would be useful to understand the examples given. For background information and primers on these subjects I provide references.
 
 My main focus is the development of tests for language learners, specifically English language learners. The theory and data processing involved can  be transferred to other domains that require measurement of latent ability. The IRT model that I focus on is the 1PL (or Rasch) model. For readers interested in extending analysis to more complex models, see [@magis2017computerized].
 
@@ -43,7 +43,7 @@ Here $X$ is the item response (either 1 or 0), $\theta$ represents the latent ab
 * The items are independent of one another
 * The response probability increases with the ability level using a logistic cumulative distribution function
 
-This S-shaped function can be seen below for three test items with different difficulties.
+The sigmoid function can be seen below for three test items with different difficulties.
 
 ![Logistic Function](images/icc.png)
 
@@ -109,7 +109,7 @@ If we start out with the 1-2-4 design shown above, based on our test requirement
 * the modules and the items they contain, `modules`
 * the routing runes in the transition matrix `routing`
 
-```{r module difficulties}
+```{r module difficulties, echo=TRUE}
 library(mstR)
 
 it.MST <- rbind(genDichoMatrix(12, model = "1PL", bPrior = c("norm", 0.0, 1)),
@@ -126,7 +126,7 @@ Here we've decided to use the 1PL (or Rasch) model, so we need to supply `bPrior
 
 Fitting these items into the modules is done by creating another matrix with 68 rows (items) and 7 columns (modules); a cell containing a 1 indicates membership of an item in a module.
 
-```{r module items}
+```{r module items, echo=TRUE}
 modules <- matrix(0, 68, 7)
 modules[1:12, 1] <- 1
 modules[13:20, 2] <- 1
@@ -139,16 +139,54 @@ modules[59:68, 7] <- 1
 
 The final part of the design activity is construction of the routing rules, which is done by creating an $R \times R$ *transition matrix* which shows the valid paths to modules in the next stage and where $R$ is the number of modules. A value of 1 indicates that a path exists from module $i$ to module $j$ in the matrix.
 
-```{r module routing}
+```{r module routing, echo=TRUE}
 routing <- matrix(0, 7, 7)
 routing[1, 2:3] <- 1
 routing[2, 4:6] <- 1
 routing[3, 5:7] <- 1
 
-print(routing)
+cutoff <- matrix(NA, 7, 2)
+cutoff[2,] <- c(-Inf, 0.0)
+cutoff[3,] <- c(0.0, Inf)
+cutoff[4,] <- c(-Inf, -1.0)
+cutoff[5,] <- c(-1.0, 0.0)
+cutoff[6,] <- c(0.0, 1.0)
+cutoff[7,] <- c(1.0, Inf)
+
+print(cutoff)
 ```
 
 As can be seen, modules 4-7 (Module D to Module G in the design) are final stage modules, so do not route onward.
+
+Having created a simulated item bank for the design, it is possible to generate simulated item responses by selecting a $\theta$ for a simulated candidate:
+
+```{r simulated test response, echo=TRUE}
+theta <- -0.79
+
+dfSampleResponse <- genPattern(theta, it.MST)
+
+print(dfSampleResponse)
+```
+
+Here we use a $\theta$ of `r theta`. Note that this doesn't really simulate a true MST test, as it ignores the routing rules and simply returns a response for all items in the simulated item bank. We can however use the `randomMST()` function to perform a more realistic simulation. The `randomMST()` function will generate a response pattern for a given simulated item bank, an MST structure, and a true ability level ($\theta$). We'll use maximum likelihood estimation (`"ML"`) for ability estimation, and the maximum Fisher information criterion (`"MFI"`) for module selection.
+
+```{r simulated MST test response, echo=TRUE}
+start <- list(theta = theta)
+test <- list(method = "ML", moduleSelect = "MFI")
+final <- list(method = "ML")
+
+dfMSTResponse <- randomMST(trueTheta = theta, 
+                           itemBank = it.MST, modules = modules, transMatrix = routing,
+                           start = start, test = test, final = final)
+
+(dfMSTResponse)
+```
+
+The Module Information Function is used to determine the 'best' (ie. the most informative) module to route to in the next stage. In this example the selected modules are `r dfMSTResponse$selected.modules`. A plot can be made as follows, showing the highlighted route through the multi-stage test:
+
+```{r show simulated test, echo=TRUE}
+plot(dfMSTResponse)
+```
 
 
 See chapter 7 of [@magis2017computerized] for details, or check out the [CRAN page](https://cran.r-project.org/web/packages/mstR/index.html) for `mstR`.
