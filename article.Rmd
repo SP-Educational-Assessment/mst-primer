@@ -55,11 +55,19 @@ IRT is used to inform calibration of the test items after they've been developed
 
 A typical modular design can look like this:
 
-![MST Design](images/modules.png)
+![MST Design](images/modules.svg)
 
 This is an example of a 1-2-4 design, but others are possible. An important question to answer during test design, is the module topology and the overall difficulty level for each module (represented as the mean item difficulty, $\bar{b}$).
 
 In the pre-trial stage, its possible to run simulations to help us answer these questions.
+
+Its normal for a multistage test to have a single module in stage one, called the routing module. 
+
+A benefit of using modules is that items can be placed into modules and then delivered as parallel test forms called panels. Having multiple panels helps to reduce item exposure rate as previously seen panels can be precluded from selection for future test administrations. It also makes it easier to assemble tests. It is possible to place items in more than one panel, but its important to ensure that parallel panels are of equivalent difficulty.
+
+![Panels](images/panels.svg)
+
+When constructed in this way each module can be considered as a module instance (for example Module A:3 being the instance of module A in panel 3),
 
 ## Data Sources and Management
 
@@ -70,8 +78,6 @@ The first class of these data sources is the one that is used to store item info
 * Items
 * Modules
 * Panels
-
-Items are aggregated into Modules, and Modules are grouped into Panels. A Panel is a set of Modules that can be delivered as a test instance. Note that it is possible for Items to be placed in more than one Panel (although an Item should not be duplicated in the same Panel).
 
 In addition to the item information, another data source is used for the candidate information. This forms the candidate information service that will be used for the test. In addition to storing a unique candidate ID, additional metadata of interest (such as the candidate's length of study or L1) may be held by the candidate information service.
 
@@ -87,7 +93,7 @@ This design may not be sufficient for your needs. You need to consider whether t
 
 Normally the so-called routing module in stage 1 (Module A) would contain a mix of items with a mean difficulty of 0 (in other words 'medium' difficulty). Candidates that are placed in the lower ability range at the end of this module will be routed to the 'easy' module in stage 2 (Module B), and those in the upper ability range to the 'hard' module (Module C).
 
-## Initial Simulation
+## Pre-Trial Simulation and Design
 
 An initial simulation of your test to try out designs can be done by using the `mstR` library (see @magis2017computerized). Here the aim is to select a set of designs and see if there is an optimal design. It will also help understand how the scoring of the test should be implemented, including the number correct (NC) scores that will be used for routing, and the ability estimates for final scoring and reporting.
 
@@ -109,6 +115,8 @@ If we start out with the 1-2-4 design shown above, based on our test requirement
 * the modules and the items they contain, `modules`
 * the routing runes in the transition matrix `routing`
 
+![MST Design](images/module-items.svg)
+
 ```{r module difficulties, echo=TRUE}
 library(mstR)
 
@@ -122,9 +130,9 @@ it.MST <- rbind(genDichoMatrix(12, model = "1PL", bPrior = c("norm", 0.0, 1)),
 it.MST <- as.matrix(it.MST)
 ```
 
-Here we've decided to use the 1PL (or Rasch) model, so we need to supply `bPrior` difficulty distributions, and convert the data frame into a matrix. We'll end up with a matrix of 68 items, each with randomised difficulty parameters.
+Here we've decided to use the 1PL (or Rasch) model, so we need to supply `bPrior` difficulty distributions, and convert the data frame into a matrix. We'll end up with a matrix of 68 items, each with randomised difficulty parameters. A test will comprise 30 items (12 + 8 + 10).
 
-Fitting these items into the modules is done by creating another matrix with 68 rows (items) and 7 columns (modules); a cell containing a 1 indicates membership of an item in a module.
+Selecting items into the modules is done by creating another matrix with 68 rows (items) and 7 columns (modules); a cell containing a 1 indicates membership of an item in a module.
 
 ```{r module items, echo=TRUE}
 modules <- matrix(0, 68, 7)
@@ -161,7 +169,7 @@ As can be seen, modules 4-7 (Module D to Module G in the design) are final stage
 Having created a simulated item bank for the design, it is possible to generate simulated item responses by selecting a $\theta$ for a simulated candidate:
 
 ```{r simulated test response, echo=TRUE}
-theta <- -0.79
+theta <- 1.02
 
 dfSampleResponse <- genPattern(theta, it.MST)
 
@@ -188,15 +196,74 @@ The Module Information Function is used to determine the 'best' (ie. the most in
 plot(dfMSTResponse)
 ```
 
+### Running Repeated Simulations to find RMSE
+
+We can run repeated simulations varying the module topology, number of items per module, mean difficulty levels, or some other aspect of the model. By calculating the RMSE we can see which set of parameters is optimal.
 
 See chapter 7 of [@magis2017computerized] for details, or check out the [CRAN page](https://cran.r-project.org/web/packages/mstR/index.html) for `mstR`.
 
 
+## Trialling and Test Validation
 
-1. Trialling and Test Validation
-	- Item Writing and Intial Validation
-	- Trialling
-	- Import and validation of trial data
+Once the parameters of the test design are well established, the test designers should have a good idea of the number of modules, items and relative difficulties required. 
+
+### Item Writing and Intial Validation
+
+A process of item writing will then be undertaken. Subject matter experts (SMEs) will be brought in to help define the instructions of test writers, and a set of items will then be created by the team of item writers. To take our test design example, we'll establish the number of items for each module that will be required at each CEFR level.
+
+In general the test designers will want to ensure that each module contains a balance of items of varying difficulty. The Common European Frame of Reference (CEFR) is used to assign items into different ability levels.
+
+![Module A Items](images/moduleA-items.svg)
+A group of raters will be used to validate items and ensure that they are set at the correct ability level. Rating sheets are then collated and a decision then made on the CEFR ability rating for each item in the item bank. Various methods can be used to converge on an agreed ability level for each item; the simplest is to find the modal ability level (ie. the most frequently occurring) from all your raters. Where there is no single mode, or there are wide diagreements between raters, a manual adjustment to a commonly agreed ability level may be required. Ideally at least 5 raters would be used for each item to avoid this as far as possible.
+
+Once ability levels are agreed, they should be used to update the item bank.
+
+
+### Initial Trial
+
+The purpose of the initial trial is to administer a test to a cohort of test candidates. Care should be taken to ensure that this cohort is representative of the target candidature. The test response can then be used to calculate item difficulties using the selected IRT model. We'll use the 1PL (Rasch) model in the examples that follow. 
+
+#### Import and validation of trial data
+
+The trial data is usually received as CSV or Excel files that comprise a candidate ID and then a set of responses (0 or 1) for each item. Not all items may have been taken by each candidate so there is a good chance of NA values occurring. Data validation and cleansing is a key part of preparing the data from the field trial so that it can be used in a Rasch analysis.
+
+```{r}
+library(tidyverse)
+
+dfTestResponses <- read_csv('trial-data.csv')
+
+head(dfTestResponses[1:8])
+```
+
+The `ltm` library can be used to fit a number of dichotomous and polytomous IRT models. Its the fastest library that I've found for fitting a Rasch model. First we get some summary statistics from the data, including 
+
+```{r}
+library(ltm)
+
+# drop the Candidate column, it's not required for the IRT functions
+dfTrial <- dplyr::select(dfTestResponses, -Candidate)
+
+# return descriptive stats such as Cronbach's alpha
+descript <- ltm::descript(dfTrial, chi.squared = FALSE)
+
+# graph the frequencies of the total scores
+dfFreqs <- enframe(descript$items[1:length(descript$items)],
+                   name = "testscore", value = "frequency")
+
+ggplot(data = dfFreqs) +
+  geom_bar(mapping = aes(x = testscore, y = frequency), stat = "identity") +
+  xlim(0, 40)
+```
+
+```{r Rasch model}
+# fit the Rasch model
+raschmodel <- ltm::rasch(dfTrial, constraint = cbind(length(dfTrial) + 1, 1),
+                     IRT.param = TRUE, start.val = "random")
+rasch_summary <- summary(raschmodel)
+```
+
+
+
 	- Updating the item bank
 	- Other outputs
 
