@@ -161,7 +161,7 @@ cutoff[5,] <- c(-1.0, 0.0)
 cutoff[6,] <- c(0.0, 1.0)
 cutoff[7,] <- c(1.0, Inf)
 
-print(cutoff)
+(cutoff)
 ```
 
 As can be seen, modules 4-7 (Module D to Module G in the design) are final stage modules, so do not route onward.
@@ -173,7 +173,7 @@ theta <- 1.02
 
 dfSampleResponse <- genPattern(theta, it.MST)
 
-print(dfSampleResponse)
+(dfSampleResponse)
 ```
 
 Here we use a $\theta$ of `r theta`. Note that this doesn't really simulate a true MST test, as it ignores the routing rules and simply returns a response for all items in the simulated item bank. We can however use the `randomMST()` function to perform a more realistic simulation. The `randomMST()` function will generate a response pattern for a given simulated item bank, an MST structure, and a true ability level ($\theta$). We'll use maximum likelihood estimation (`"ML"`) for ability estimation, and the maximum Fisher information criterion (`"MFI"`) for module selection.
@@ -192,7 +192,7 @@ dfMSTResponse <- randomMST(trueTheta = theta,
 
 The Module Information Function is used to determine the 'best' (ie. the most informative) module to route to in the next stage. In this example the selected modules are `r dfMSTResponse$selected.modules`. A plot can be made as follows, showing the highlighted route through the multi-stage test:
 
-```{r show simulated test, echo=TRUE}
+```{r show simulated test, echo=FALSE}
 plot(dfMSTResponse)
 ```
 
@@ -235,7 +235,7 @@ dfTestResponses <- read_csv('trial-data.csv')
 head(dfTestResponses[1:8])
 ```
 
-The `ltm` library can be used to fit a number of dichotomous and polytomous IRT models. Its the fastest library that I've found for fitting a Rasch model. First we get some summary statistics from the data, including 
+The `ltm` library can be used to fit a number of dichotomous and polytomous IRT models. Its the fastest library that I've found for fitting a Rasch model. Before doing that we get some summary statistics from the data, including the Cronbach's alpha measure of covariance. Cronbach's alpha is a function of the number of items in a test, the average covariance between pairs of items, and the variance of the total score. In our test we've split our items into different modules according to the skill that is being measured, so it makes sense to calculate alphas for each module, although we could also do so by stage. We need to make sure that we remove any rows containing NA values before calculating Cronbach's alpha.
 
 ```{r}
 library(ltm)
@@ -243,16 +243,35 @@ library(ltm)
 # drop the Candidate column, it's not required for the IRT functions
 dfTrial <- dplyr::select(dfTestResponses, -Candidate)
 
-# return descriptive stats such as Cronbach's alpha
-descript <- ltm::descript(dfTrial, chi.squared = FALSE)
+# its sometimes useful to see the the average covariances between pairs of items and compare this with the variance of the total score.
+# this can be done on a per-module basis using the Cronbach's alpha measure of covariance
+# to usefully use this we'll need to work out this measure on a per-module basis
+dfModuleAItems <- dfTrial %>% dplyr::select(1:12) %>% na.omit()
+dfModuleBItems <- dfTrial %>% dplyr::select(13:20) %>% na.omit()
+dfModuleCItems <- dfTrial %>% dplyr::select(21:28) %>% na.omit()
+dfModuleDItems <- dfTrial %>% dplyr::select(29:38) %>% na.omit()
+dfModuleEItems <- dfTrial %>% dplyr::select(39:48) %>% na.omit()
+dfModuleFItems <- dfTrial %>% dplyr::select(49:58) %>% na.omit()
+dfModuleGItems <- dfTrial %>% dplyr::select(59:68) %>% na.omit()
 
-# graph the frequencies of the total scores
-dfFreqs <- enframe(descript$items[1:length(descript$items)],
-                   name = "testscore", value = "frequency")
+alphasModuleA <- ltm::cronbach.alpha(dfModuleAItems)
+alphasModuleB <- ltm::cronbach.alpha(dfModuleBItems)
+alphasModuleC <- ltm::cronbach.alpha(dfModuleCItems)
+alphasModuleD <- ltm::cronbach.alpha(dfModuleDItems)
+alphasModuleE <- ltm::cronbach.alpha(dfModuleEItems)
+alphasModuleF <- ltm::cronbach.alpha(dfModuleFItems)
+alphasModuleG <- ltm::cronbach.alpha(dfModuleGItems)
 
-ggplot(data = dfFreqs) +
-  geom_bar(mapping = aes(x = testscore, y = frequency), stat = "identity") +
-  xlim(0, 40)
+moduleNames <- c('A', 'B', 'C', 'D', 'E', 'F', 'G')
+alphas <- c(alphasModuleA$alpha, alphasModuleB$alpha, alphasModuleC$alpha,
+            alphasModuleD$alpha, alphasModuleE$alpha, alphasModuleF$alpha,
+            alphasModuleG$alpha)
+num_items <- c(alphasModuleA$p, alphasModuleB$p, alphasModuleC$p,
+            alphasModuleD$p, alphasModuleE$p, alphasModuleF$p,
+            alphasModuleG$p)
+num_responses <- c(alphasModuleA$n, alphasModuleB$n, alphasModuleC$n,
+            alphasModuleD$n, alphasModuleE$n, alphasModuleF$n,
+            alphasModuleG$n)
 ```
 
 ```{r Rasch model}
