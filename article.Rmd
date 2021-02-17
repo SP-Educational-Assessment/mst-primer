@@ -235,7 +235,14 @@ dfTestResponses <- read_csv('trial-data.csv')
 head(dfTestResponses[1:8])
 ```
 
-The `ltm` library can be used to fit a number of dichotomous and polytomous IRT models. Its the fastest library that I've found for fitting a Rasch model. Before doing that we get some summary statistics from the data, including the Cronbach's alpha measure of covariance. Cronbach's alpha is a function of the number of items in a test, the average covariance between pairs of items, and the variance of the total score. In our test we've split our items into different modules according to the skill that is being measured, so it makes sense to calculate alphas for each module, although we could also do so by stage. We need to make sure that we remove any rows containing NA values before calculating Cronbach's alpha.
+The `ltm` library can be used to fit a number of dichotomous and polytomous IRT models. Its the fastest library that I've found for fitting a Rasch model. Before doing that we get some summary statistics from the data, including the Cronbach's alpha measure of covariance. Cronbach's alpha is a function of the number of items in a test, the average covariance between pairs of items, and the variance of the total score. It is defined as:
+
+$$
+\alpha = \frac{p \times \bar{r}}{1 + (p – 1)\bar{r}}
+$$
+Where $p$ is the number if items, $\bar{v}$ is the mean variance of each item, and $\bar{r}$ is the average of all covariances between items.
+
+In our test we've split our items into different modules according to the skill that is being measured, so it makes sense to calculate alphas for each module, although we could also do so by stage if we wanted. We need to make sure that we remove any rows containing NA values before calculating Cronbach's alpha.
 
 ```{r}
 library(ltm)
@@ -243,9 +250,8 @@ library(ltm)
 # drop the Candidate column, it's not required for the IRT functions
 dfTrial <- dplyr::select(dfTestResponses, -Candidate)
 
-# its sometimes useful to see the the average covariances between pairs of items and compare this with the variance of the total score.
-# this can be done on a per-module basis using the Cronbach's alpha measure of covariance
-# to usefully use this we'll need to work out this measure on a per-module basis
+# now create per-module item response data frames, remembering to remove 
+# any candidates who did not take the module
 dfModuleAItems <- dfTrial %>% dplyr::select(1:12) %>% na.omit()
 dfModuleBItems <- dfTrial %>% dplyr::select(13:20) %>% na.omit()
 dfModuleCItems <- dfTrial %>% dplyr::select(21:28) %>% na.omit()
@@ -254,16 +260,21 @@ dfModuleEItems <- dfTrial %>% dplyr::select(39:48) %>% na.omit()
 dfModuleFItems <- dfTrial %>% dplyr::select(49:58) %>% na.omit()
 dfModuleGItems <- dfTrial %>% dplyr::select(59:68) %>% na.omit()
 
-alphasModuleA <- ltm::cronbach.alpha(dfModuleAItems)
-alphasModuleB <- ltm::cronbach.alpha(dfModuleBItems)
-alphasModuleC <- ltm::cronbach.alpha(dfModuleCItems)
-alphasModuleD <- ltm::cronbach.alpha(dfModuleDItems)
-alphasModuleE <- ltm::cronbach.alpha(dfModuleEItems)
-alphasModuleF <- ltm::cronbach.alpha(dfModuleFItems)
-alphasModuleG <- ltm::cronbach.alpha(dfModuleGItems)
+# calculate Cronbach's alpha for each module
+alphasModuleA <- ltm::cronbach.alpha(dfModuleAItems, standardized = TRUE, na.rm = TRUE)
+alphasModuleB <- ltm::cronbach.alpha(dfModuleBItems, standardized = TRUE, na.rm = TRUE)
+alphasModuleC <- ltm::cronbach.alpha(dfModuleCItems, standardized = TRUE, na.rm = TRUE)
+alphasModuleD <- ltm::cronbach.alpha(dfModuleDItems, standardized = TRUE, na.rm = TRUE)
+alphasModuleE <- ltm::cronbach.alpha(dfModuleEItems, standardized = TRUE, na.rm = TRUE)
+alphasModuleF <- ltm::cronbach.alpha(dfModuleFItems, standardized = TRUE, na.rm = TRUE)
+alphasModuleG <- ltm::cronbach.alpha(dfModuleGItems, standardized = TRUE, na.rm = TRUE)
 
-moduleNames <- c('A', 'B', 'C', 'D', 'E', 'F', 'G')
-alphas <- c(alphasModuleA$alpha, alphasModuleB$alpha, alphasModuleC$alpha,
+# create a composite data frame and plot the alphas and the number of samples
+# we'll want to focus on modules that show a low alpha and a small number of samples
+# as we may want to get more trial data for these, or look at the items to make
+# sure they are testing the right skill (or both)
+module <- c('A', 'B', 'C', 'D', 'E', 'F', 'G')
+alpha <- c(alphasModuleA$alpha, alphasModuleB$alpha, alphasModuleC$alpha,
             alphasModuleD$alpha, alphasModuleE$alpha, alphasModuleF$alpha,
             alphasModuleG$alpha)
 num_items <- c(alphasModuleA$p, alphasModuleB$p, alphasModuleC$p,
@@ -272,7 +283,12 @@ num_items <- c(alphasModuleA$p, alphasModuleB$p, alphasModuleC$p,
 num_responses <- c(alphasModuleA$n, alphasModuleB$n, alphasModuleC$n,
             alphasModuleD$n, alphasModuleE$n, alphasModuleF$n,
             alphasModuleG$n)
+
+dfCronbachsAlpha <- data.frame(module, num_items, num_responses, alpha)
+
+(dfCronbachsAlpha)
 ```
+Ideally we're looking for alphas of 0.7 and above; less than this indicates that there is weak covariance between the items in the module, which means they may not be testing the same ability.
 
 ```{r Rasch model}
 # fit the Rasch model
