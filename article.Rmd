@@ -169,7 +169,7 @@ As can be seen, modules 4-7 (Module D to Module G in the design) are final stage
 Having created a simulated item bank for the design, it is possible to generate simulated item responses by selecting a $\theta$ for a simulated candidate:
 
 ```{r simulated test response, echo=TRUE}
-theta <- 1.02
+theta <- 0.95
 
 dfSampleResponse <- genPattern(theta, it.MST)
 
@@ -235,16 +235,23 @@ dfTestResponses <- read_csv('trial-data.csv')
 head(dfTestResponses[1:8])
 ```
 
-The `ltm` library can be used to fit a number of dichotomous and polytomous IRT models. Its the fastest library that I've found for fitting a Rasch model. Before doing that we get some summary statistics from the data, including the Cronbach's alpha measure of covariance. Cronbach's alpha is a function of the number of items in a test, the average covariance between pairs of items, and the variance of the total score. It is defined as:
+The `ltm` library can be used to fit a number of dichotomous and polytomous IRT models. Its the fastest library that I've found for fitting a Rasch model. Before doing that we get some summary statistics from the data, including the Cronbach's alpha measure of covariance. 
+
+#### Consistency and reliability
+
+We want to make sure that our modules are internally consistent and reliable as tests of a given ability. In our test we've grouped various skills or abilities into the various stages. So, stage 1 (ie. Module A) is designed as a test of language use, stage 2 (Modules B and C) is designed to measure reading skills, and stage 3 is designed to measure listening skills. The overall test is designed to measure English language ability in non-native learners of English.
+
+Cronbach's alpha is a function of the number of items in a test, the average covariance between pairs of items, and the variance of the total score. It is defined as:
 
 $$
 \alpha = \frac{p \times \bar{r}}{1 + (p – 1)\bar{r}}
 $$
-Where $p$ is the number if items, $\bar{v}$ is the mean variance of each item, and $\bar{r}$ is the average of all covariances between items.
+
+Here, $p$ is the number if items and $\bar{r}$ is the average of all covariances between items.
 
 In our test we've split our items into different modules according to the skill that is being measured, so it makes sense to calculate alphas for each module, although we could also do so by stage if we wanted. We need to make sure that we remove any rows containing NA values before calculating Cronbach's alpha.
 
-```{r Cronbach's alpha}
+```{r Cronbach alpha}
 library(ltm)
 library(ggrepel)
 
@@ -295,9 +302,10 @@ ggplot(dfCronbachsAlpha, aes(x=alpha, y=num_responses, size = num_items, color =
     geom_label_repel(aes(label = module, size = NULL)) +
     scale_x_continuous(limits = c(0, 1)) +
     theme(legend.position = "none") +
-    labs(x = "alpha", y = "# responses")
+    labs(x = "alpha", y = "# responses") +
+    geom_vline(xintercept = 0.7)
 ```
-Ideally we're looking for alphas of 0.7 and above; less than this indicates that there is weak covariance between the items in the module, which means they may not be testing the same ability.
+Ideally we're looking for alphas of 0.7 and above; less than this indicates that there is weak covariance between the items in the module, which means they may not be testing the same ability. This measure is really only useful as a guide for further investigations; the ultimate decision on whether to modify the items in each module should be taken in collaboration with the raters and other subject matter experts.
 
 ```{r Rasch model}
 # fit the Rasch model
