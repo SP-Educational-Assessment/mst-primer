@@ -244,8 +244,9 @@ Where $p$ is the number if items, $\bar{v}$ is the mean variance of each item, a
 
 In our test we've split our items into different modules according to the skill that is being measured, so it makes sense to calculate alphas for each module, although we could also do so by stage if we wanted. We need to make sure that we remove any rows containing NA values before calculating Cronbach's alpha.
 
-```{r}
+```{r Cronbach's alpha}
 library(ltm)
+library(ggrepel)
 
 # drop the Candidate column, it's not required for the IRT functions
 dfTrial <- dplyr::select(dfTestResponses, -Candidate)
@@ -274,6 +275,7 @@ alphasModuleG <- ltm::cronbach.alpha(dfModuleGItems, standardized = TRUE, na.rm 
 # as we may want to get more trial data for these, or look at the items to make
 # sure they are testing the right skill (or both)
 module <- c('A', 'B', 'C', 'D', 'E', 'F', 'G')
+stage <- c(1, 2, 2, 3, 3, 3, 3)
 alpha <- c(alphasModuleA$alpha, alphasModuleB$alpha, alphasModuleC$alpha,
             alphasModuleD$alpha, alphasModuleE$alpha, alphasModuleF$alpha,
             alphasModuleG$alpha)
@@ -284,9 +286,16 @@ num_responses <- c(alphasModuleA$n, alphasModuleB$n, alphasModuleC$n,
             alphasModuleD$n, alphasModuleE$n, alphasModuleF$n,
             alphasModuleG$n)
 
-dfCronbachsAlpha <- data.frame(module, num_items, num_responses, alpha)
+dfCronbachsAlpha <- data.frame(module, stage, num_items, num_responses, alpha)
 
 (dfCronbachsAlpha)
+
+ggplot(dfCronbachsAlpha, aes(x=alpha, y=num_responses, size = num_items, color = module)) +
+    geom_point() +
+    geom_label_repel(aes(label = module, size = NULL)) +
+    scale_x_continuous(limits = c(0, 1)) +
+    theme(legend.position = "none") +
+    labs(x = "alpha", y = "# responses")
 ```
 Ideally we're looking for alphas of 0.7 and above; less than this indicates that there is weak covariance between the items in the module, which means they may not be testing the same ability.
 
