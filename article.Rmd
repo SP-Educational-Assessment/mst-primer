@@ -83,7 +83,7 @@ In addition to the item information, another data source is used for the candida
 
 Finally, test response data is required. Essentially this is a matrix containing rows of candidates and columns of items. Cells will conatain a 1 (item answered correctly) or a 0 (item answered incorrectly). Items that were not presented (for example, from a module that was not in the test path for a candidate) are left blank and will be classed as NAs.
 
-This data may be stored as flat files (in CSV format for instance), or held in database tables, or in a mix of different sources. Typically you would want to stored them in a cloud storage system (for example in AWS S3 buckets or AWS RDS datbases) to ensure that the data is stored in a way that is secure, accessible and geographically distributed (for resilience).
+This data may be stored as flat files (in CSV format for instance), or held in database tables, or in a mix of different sources. Typically you would want to stored them in a cloud storage system (for example in AWS S3 buckets or RDS databases) to ensure that the data is stored in a way that is secure, accessible and geographically distributed (for resilience).
 
 ## MST Design Considerations
 
@@ -196,9 +196,134 @@ The Module Information Function is used to determine the 'best' (ie. the most in
 plot(dfMSTResponse)
 ```
 
-### Running Repeated Simulations to find RMSE
+### Running Repeated Simulations
 
-We can run repeated simulations varying the module topology, number of items per module, mean difficulty levels, or some other aspect of the model. By calculating the RMSE we can see which set of parameters is optimal.
+We can run repeated simulations varying the topology of the test (for example changing the 1-2-4 design presented earlier). Or by changing the number of items per module, the mean difficulty levels, or some other aspect of the model. By calculating the differences between estimated and true ability levels we can see which set of parameters is optimal.
+
+In this example we'll change the number of items per module; keeping the total number constant, but changing the relative number of items as follows:
+
+| Design | Stage 1 | Stage 2 | Stage 3 | Total |
+| ------ | ------: | ------: | ------: | ----: |
+| 1      | 12      | 8       | 10      | 30    |
+| 2      | 12      | 10      | 8       | 30    |
+| 3      | 10      | 12      | 8       | 30    |
+| 4      | 10      | 8       | 12      | 30    |
+| 5      | 8       | 10      | 12      | 30    |
+| 6      | 8       | 12      | 10      | 30    |
+
+The `mstDesign()` function is used to generate the set of test designs, by varying the number of items for each module by stage.
+
+```{r MST designs}
+mstDesign <- function(stage, difficulties) {
+  matrixN <- stage[1] + (2 * stage[2]) + (4 * stage[3])
+  modules <- matrix(0, matrixN, 7)
+  moduleA <- stage[1]
+  moduleB <- moduleA+stage[2]
+  moduleC <- moduleB+stage[2]
+  moduleD <- moduleC+stage[3]
+  moduleE <- moduleD+stage[3]
+  moduleF <- moduleE+stage[3]
+  moduleG <- moduleF+stage[3]
+  
+  modules[1:moduleA, 1] <- 1
+  modules[moduleA+1:stage[2], 2] <- 1
+  modules[moduleB+1:stage[2], 3] <- 1
+  modules[moduleC+1:stage[3], 4] <- 1  
+  modules[moduleD+1:stage[3], 5] <- 1
+  modules[moduleE+1:stage[3], 6] <- 1
+  modules[moduleF+1:stage[3], 7] <- 1
+  
+  itembank <- rbind(genDichoMatrix(stage[1], model = "1PL", bPrior = c("norm", 0.0, 1)),
+                    genDichoMatrix(stage[2], model = "1PL", bPrior = c("norm", -1.0, 1)),
+                    genDichoMatrix(stage[2], model = "1PL", bPrior = c("norm", 1.0, 1)),
+                    genDichoMatrix(stage[3], model = "1PL", bPrior = c("norm", -1.5, 1)),
+                    genDichoMatrix(stage[3], model = "1PL", bPrior = c("norm", -0.5, 1)),
+                    genDichoMatrix(stage[3], model = "1PL", bPrior = c("norm", 0.5, 1)),
+                    genDichoMatrix(stage[3], model = "1PL", bPrior = c("norm", 1.5, 1)))
+  itembank <- as.matrix(itembank)
+
+  return(list("modules" = modules, "itemBank" = itembank))
+}
+
+stages <- list(c(12,8,10), c(12,10,8), c(10,12,8),
+               c(10,8,12), c(8,10,12), c(8,12,10))
+testDesigns <- lapply(stages, mstDesign)
+```
+
+To run the simulations we'll create a set of 8,550 simulated candidates with ability range -2.5 to 2.5 (stepped in increments of 0.25). Then we'll repeat for each of the six designs above, with the same item bank.
+
+```{r setup simulation}
+simulation.levels <- seq(-2.5, 2.0, 0.25) # 19 ability levels
+simulation.candidates <- rep(simulation.levels, each = 450) # 19 * 450 = 8550 simulated candidates
+simulation.responses <- matrix(NA, length(simulation.candidates), 6)
+simulation.start <- list(theta = 0)
+simulation.test <- list(method = "ML", moduleSelect = "MFI")
+simulation.final <- list(method = "ML")
+```
+
+We'll then loop over each design, running the `randomMST()` function to simulate a test.
+
+```{r simulate tests}
+for (j in 1:6) {
+  for (i in 1:length(simulation.candidates)) {
+    prov <- randomMST(trueTheta = simulation.candidates[i],
+      itemBank = testDesigns[[j]]$itemBank, modules = testDesigns[[j]]$modules,
+      transMatrix = routing, genSeed = i,
+      start = simulation.start, test = simulation.test, final = simulation.final)
+    simulation.responses[i,j] <- prov$thFinal
+  }
+}
+```
+
+#### ASB and RMSE values
+
+The results can now be graphed, with averaged signed bias (ASB) and root mean squared error (RMSE) values calculated for each design and for each ability level. ASB is the mean difference between estimated and true ability levels, and RMSE is the square root of the mean of the squared differences between estimated and true ability levels. With both measures, lower is better.
+
+```{r simulation results}
+simulation.ASB <- simulation.RMSE <- matrix(NA, length(simulation.levels), 6)
+ASB <- function(t, th) mean(t-th)
+RMSE <- function(t, th) sqrt(mean((t-th)^2))
+
+for (i in 1:length(simulation.levels)) {
+  for (j in 1:6) {
+    index <- which(simulation.candidates == simulation.levels[i])
+    simulation.ASB[i,j] <- ASB(simulation.responses[index,j], simulation.candidates[i])
+    simulation.RMSE[i,j] <- RMSE(simulation.responses[index,j], simulation.candidates[i])
+  }
+}
+
+dfASB <- data.frame(simulation.ASB)
+dfASB$theta <- simulation.levels
+
+dfRMSE <- data.frame(simulation.RMSE)
+dfRMSE$theta <- simulation.levels
+```
+
+```{r simultation graphs}
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00")
+
+ggplot(data = dfASB, aes(x = theta)) +
+  scale_y_continuous(limits = c(-1, 5)) +
+  geom_line(aes(y = X1, colour=cbPalette[1])) + 
+  geom_line(aes(y = X2, colour=cbPalette[2])) +
+  geom_line(aes(y = X3, colour=cbPalette[3])) +
+  geom_line(aes(y = X4, colour=cbPalette[4])) +
+  geom_line(aes(y = X5, colour=cbPalette[5])) +
+  geom_line(aes(y = X6, colour=cbPalette[6])) +
+  labs(x = "theta", y = "ASB")
+
+ggplot(data = dfRMSE, aes(x = theta)) +
+  scale_y_continuous(limits = c(-1, 5)) +
+  geom_line(aes(y = X1, colour=cbPalette[1])) + 
+  geom_line(aes(y = X2, colour=cbPalette[2])) +
+  geom_line(aes(y = X3, colour=cbPalette[3])) +
+  geom_line(aes(y = X4, colour=cbPalette[4])) +
+  geom_line(aes(y = X5, colour=cbPalette[5])) +
+  geom_line(aes(y = X6, colour=cbPalette[6])) +
+  labs(x = "theta", y = "RMSE")
+```
+
+
 
 See chapter 7 of [@magis2017computerized] for details, or check out the [CRAN page](https://cran.r-project.org/web/packages/mstR/index.html) for `mstR`.
 
