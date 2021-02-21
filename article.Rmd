@@ -496,12 +496,16 @@ write_csv(df_displayDifficulties, "item-difficulties.csv")
 The logistic function that describes an item's likelihood of being answered correctly can be represented visually like this, using the `plot` function from the `ltm` package:
 
 ```{r}
-itemNo <- 5
+itemNo <- 7
 itemID <- str_extract(rownames(df_difficulties)[itemNo], "Item\\d+")
 itemDifficulty <- df_difficulties[itemNo]
-plot(raschmodel, type = "ICC", items = itemNo, plot = TRUE, legend = TRUE)
+itemPlot <- data.frame(plot(raschmodel, type = "ICC", items = itemNo, plot = FALSE))
+colnames(itemPlot) <- c('theta', 'probability')
+ggplot(itemPlot, aes(x=theta, y=probability)) + 
+  geom_line() +
+  labs(title="Item Characteristic Curve", x="θ", y="P(X=1)")
 ```
-This is the item characteristic curve (ICC), in this case for the fifth item in the trial data, `r itemID` with difficulty $b$ = `r itemDifficulty`.
+This is the item characteristic curve (ICC), in this case for the seventh item in the trial data, `r itemID` with difficulty $b$ = `r itemDifficulty`.
 
 ### Module Characteristic Curves (MCCs)
 
