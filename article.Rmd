@@ -1,22 +1,22 @@
 ---
 title: "The Practical Application of MST"
-description: |
-  A practical guide to the design and development of computerised multistage tests.
 author:
-  - name: James Page
-    affiliation: SP Educational Consulting
-    affiliation_url: https://www.speduconsulting.co.uk/
+- name: James Page
+  affiliation: SP Educational Consulting
+  affiliation_url: https://www.speduconsulting.co.uk/
 date: "`r Sys.Date()`"
-version: 1
 output:
-  html_document:
-    theme: cerulean
-    highlight: tango
+  word_document: default
   pdf_document:
     highlight: tango
     latex_engine: lualatex
+  html_document:
+    theme: cerulean
+    highlight: tango
+version: 1
+description: |
+  A practical guide to the design and development of computerised multistage tests.
 bibliography: references.bib
-output: distill::distill_article
 ---
 
 ```{r setup, include=FALSE}
