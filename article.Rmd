@@ -22,7 +22,6 @@ bibliography: references.bib
 ```{r setup, include=FALSE}
 library(knitr)
 library(tidyverse)
-library(ggrepel)
 
 library(mstR)
 library(ltm)
@@ -54,27 +53,41 @@ Once the live test has been deployed, continual monitoring and adjustment of the
 
 ## Introduction to Item Response Theory
 
-The underlying theoretical basis for MST is the branch of psychometrics known as Item Response Theory, or IRT. The theory proposes that there are *latent traits* (for example language ability) that can be measured using a set of tests delivered to the test candidate. These test items are typically scored as correct (1) or incorrect (0) - and it these dichotomous test types that we focus on here. The response to the test items can then be use to estimate the latent trait by fitting an IRT model. For MSTs, the test items are grouped into modules that can be delivered as seperate but linked units in a test administration. Progression from module to module is dictated by the candidate's estimated ability, with cut-scores determining the next module to progress to.
+When you deliver a test to a set of candidates, how can you be sure that you are measuring those candidates in the same way, even though the test administrated to one candidate has different items from that administered to another candidate?
+
+The underlying theoretical basis for MST is the branch of psychometrics known as Item Response Theory, or IRT. The theory proposes that there are *latent traits* (for example language ability) that can be measured using a set of tests delivered to the test candidate. These test items are typically scored as correct (1) or incorrect (0) - and it these dichotomous test types that we focus on here. The response to the test items can then be use to estimate the latent trait by fitting an IRT model. For MSTs, the test items are grouped into modules that can be delivered as separate but linked units in a test administration. Progression from module to module is dictated by the candidate's estimated ability, with cut-scores determining the next module to progress to.
 
 ### The Rasch Model
 
-The simplest IRT model, the so-called *Rasch model*, relies on a single variable parameter, the difficulty parameter (usually designated as $b$). For this reason it is also known as the one-parameter logistic model (1PL). The *item response function* (IRF) for this model uses a logistic function to model the probability of a correct response for candidate $i$ taking test item $j$:
+The simplest IRT model, the so-called *Rasch model*, applies logistic regression to items, using responses from a set of trial candidates. If you're familiar with linear regression, then the idea behind logistic regression is that the model fits a probability range (between 0.0 and 1.0) rather than a dependent variable. The independent variables are the difficulty of the item (usually designated as $b$), and the latent ability (which is denoted $\theta$). Because it only factors in the difficulty parameter of the item, it is also known as the one-parameter logistic model (1PL). Here's the *item response function* (IRF) that is used to model the probability of a correct response for candidate $i$ taking test item $j$:
 
 $$
 Pr(X_{ij} = 1|\theta_{i},b_{j}) = \frac{exp(\theta_{i} - b_{j})}{1+exp(\theta_{i} - b_{j})}
 $$
-
-Here $X$ is the item response (either 1 or 0), $\theta$ represents the latent ability being measured, and $b$ represents the difficulty of the item. Certain assumptions are made by the model, most importantly:
+$X$ is the item response (which is either 1 or 0 for the dichotomous tests we cover here), $\theta$ represents the latent ability being measured, and $b$ represents the difficulty of the item. Certain assumptions are made by the model, most importantly:
 
 * Each item targets one and only one latent trait
 * The items are independent of one another
 * The response probability increases with the ability level using a logistic cumulative distribution function
 
-The sigmoid function can be seen below for three test items with different difficulties.
+This sigmoid function can be plotted as an Item Characteristic Curve (ICC). See below for three items of differing difficulties with ICCs plotted.
 
 ![Logistic Function](images/icc.png)
 
-There is an equivalence between $\theta$ and $b$ such that a candidate with mean ability ($\theta = 0$) would be expected to get item 870 (green) correct with a probability of 0.11. The less difficult item 866 (black) would see a probability of around 0.9 for a correct response. Item 868 (red) is somewhere in between the two in terms of difficulty. You could also read this as stating that candidates who have a $\theta$ of 2.07 show a 50:50 chance of getting item 870 correct.
+There is an equivalence between $\theta$ and $b$ such that a candidate with mean ability ($\theta = 0$) would be expected to get item 587 (blue) correct with a probability of 0.28. The less difficult item 583 (green) would have a probability of around 0.9 for a correct response for the same candidate. The right-most item, 868 (red) is the most difficult item.
+
+An item that all candidates always get right because it is too easy, or they always get wrong because it's too hard has very little informative value for a test. It's telling you very little about the ability levels of your candidates. From this it follows that an item where half the candidates answer correct and the other half answer wrong has the most informational value; this is the point where $\theta$ and $b$ are equal. This relationship can be expressed by the Item Information Function (IIF). In the 1PL model the maximum value of the IIF is 0.25 (it can be different in the other models due to the influence of the $a$ parameter).
+
+![Logistic Function](images/iif.png)
+
+
+The function is expressed as:
+
+$$
+I_i(\theta, b_i) = P_i(\theta, b_i)Q_i(\theta, b_i)
+$$
+
+Greater information implies a smaller error of measurement. When designing a test it is important to deliver items with a range of difficulties that match the expected ability ranges so that you can accurately measure the your target candidates. In the above diagram you can see that item 587 (blue) is good at measuring candidates around ability level 0.95. Item 583 is better at measuring candidates with a lower ability level.
 
 ## IRT for Mulitstage Test Design
 
