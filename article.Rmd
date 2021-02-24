@@ -6,11 +6,12 @@ author:
   affiliation_url: https://www.speduconsulting.co.uk/
 date: "`r Sys.Date()`"
 output:
-  word_document: default
   pdf_document:
     toc: true
     toc_depth: 2
     highlight: haddock
+    latex_engine: lualatex
+  word_document: default
   html_document: default
 version: 1
 description: |
@@ -561,12 +562,19 @@ trueScoreSummary <- function(plotData, module=NA) {
              theta = as.vector(plotData[,1]), 
              trueScore = as.vector(rowSums(plotData[,-1])))
 }
+
+# return a data frame with information coefficient summaries
+# that can then be plotted
+informationCoefficients <- function(plotData, module=NA) {
+  data.frame(module = module, 
+             theta = as.vector(plotData[,1]), 
+             information = as.vector(rowSums(plotData[,-1])))
+}
 ```
 
-We get the indices of the module A items and then create the plotting data before passing
-this to ggplot.
+We get the indices of the module A items and then create the plotting data before passing this to ggplot.
 
-```{r Panel 1, Stage 1 MCC}
+```{r Stage 1 MCC}
 moduleA1_items <- which(colnames(dfTrial) %in% colnames(dfModuleAItems))
 plotData <- trueScoreSummary(plot(raschmodel, 
                                   type = "ICC", 
@@ -580,7 +588,7 @@ You can read this off such that a candidate who scores 9 in the module A section
 
 We can compare the MCCs for the stage 2 modules:
 
-```{r Panel 1, Stage 2 MCCs}
+```{r Stage 2 MCCs}
 moduleB1_items <- which(colnames(dfTrial) %in% colnames(dfModuleBItems))
 moduleC1_items <- which(colnames(dfTrial) %in% colnames(dfModuleCItems))
 
@@ -596,7 +604,7 @@ A problem we can see already here is that these curves look too straight - ideal
 
 And for the modules in stage 3:
 
-```{r Panel 1, Stage 3 MCCs}
+```{r Stage 3 MCCs}
 moduleD1_items <- which(colnames(dfTrial) %in% colnames(dfModuleDItems))
 moduleE1_items <- which(colnames(dfTrial) %in% colnames(dfModuleEItems))
 moduleF1_items <- which(colnames(dfTrial) %in% colnames(dfModuleFItems))
@@ -622,7 +630,7 @@ In this section we'll show how to use the Module Information Function (MIF) to d
 
 The IIF can be represented visually like this, using the `plot` function from the `ltm` package:
 
-```{r}
+```{r Item Information Function}
 itemNo <- 7
 itemID <- str_extract(rownames(df_difficulties)[itemNo], "Item\\d+")
 itemDifficulty <- df_difficulties[itemNo]
@@ -632,6 +640,92 @@ ggplot(itemPlot, aes(x=theta, y=information)) +
   geom_line() +
   labs(title="Item Information Function", x="θ", y="I(θ)")
 ```
+
+### Module Information Functions (MIFs)
+
+Just as with the ICC-MCC relationship, its possible to sum a set of IIFs into a Module Information Function (MIF).
+
+## Routing and Cut-Scores
+
+Routing between modules is determined by the information functions for the modules in the next stage. We should aim to place the cut score to be that at which the MIFs cross.
+
+
+```{r Stage 1 MIF}
+plotData <- informationCoefficients(plot(raschmodel, 
+                                         type = "IIC", 
+                                         items = moduleA1_items, 
+                                         plot = FALSE), 
+                                    "A")
+
+ggplot(plotData, aes(x=theta, y=information)) + 
+  geom_line(aes(colour=module)) +
+  labs(title="Module Characteristic Curve", x="θ", y="I(θ)")
+```
+You can see that the maximum information point Module A is pretty close to $\theta = 0$.
+
+Now lets look at the MIFs for the two stage 2 modules:
+
+```{r Stage 2 MIFs}
+plotData <- rbind(
+  informationCoefficients(plot(raschmodel, 
+                               type = "IIC", 
+                               items = moduleB1_items, plot = FALSE), 
+                          "B"),
+  informationCoefficients(plot(raschmodel, 
+                               type = "IIC", 
+                               items = moduleC1_items, plot = FALSE), 
+                          "C")) 
+
+ggplot(plotData, aes(x=theta, y=information)) + 
+  geom_line(aes(colour=module)) +
+  labs(title="Module Characteristic Curve", x="θ", y="I(θ)") +
+  geom_vline(xintercept = 0.81, linetype="dotted")
+```
+Here we can see that there is point of intersection between modules B and C. This suggests, that candidates who have a $\hat\theta < 0.81$ in Module A should be routed to Module B, and all others routed to Module C.
+
+We can then repeat the exercise for the stage 3 modules.
+
+```{r Stage 3 MIFs}
+plotData <- rbind(
+  informationCoefficients(plot(raschmodel, 
+                               type = "IIC", 
+                               items = moduleD1_items, plot = FALSE), 
+                          "D"),
+  informationCoefficients(plot(raschmodel, 
+                               type = "IIC", 
+                               items = moduleE1_items, plot = FALSE), 
+                          "E"),
+  informationCoefficients(plot(raschmodel, 
+                               type = "IIC", 
+                               items = moduleF1_items, plot = FALSE), 
+                          "F"))
+
+
+ggplot(plotData, aes(x=theta, y=information)) + 
+  geom_line(aes(colour=module)) +
+  labs(title="Module Characteristic Curve", x="θ", y="I(θ)")
+
+
+plotData <- rbind(
+  informationCoefficients(plot(raschmodel, 
+                               type = "IIC", 
+                               items = moduleE1_items, plot = FALSE), 
+                          "E"),
+  informationCoefficients(plot(raschmodel, 
+                               type = "IIC", 
+                               items = moduleF1_items, plot = FALSE), 
+                          "F"),
+  informationCoefficients(plot(raschmodel, 
+                               type = "IIC", 
+                               items = moduleG1_items, plot = FALSE), 
+                          "G"))
+
+
+ggplot(plotData, aes(x=theta, y=information)) + 
+  geom_line(aes(colour=module)) +
+  labs(title="Module Characteristic Curve", x="θ", y="I(θ)")
+```
+
 
 7. Summary
 
