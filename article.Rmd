@@ -1,5 +1,5 @@
 ---
-title: "The Practical Application of MST"
+title: "The Practical Application of Computerised Multistage Tests"
 author:
 - name: James Page
   affiliation: SP Educational Consulting
@@ -8,11 +8,10 @@ date: "`r Sys.Date()`"
 output:
   word_document: default
   pdf_document:
-    highlight: tango
-    latex_engine: lualatex
-  html_document:
-    theme: cerulean
-    highlight: tango
+    toc: true
+    toc_depth: 2
+    highlight: haddock
+  html_document: default
 version: 1
 description: |
   A practical guide to the design and development of computerised multistage tests.
@@ -25,28 +24,29 @@ library(tidyverse)
 
 library(mstR)
 library(ltm)
+
+options(scipen = 1, digits = 3)
 ```
 
-# Introduction and Overview
+# Overview
 
 Computerised multistage tests (MSTs) have grown in popularity in recent years due to their advantages of flexibility and simplicity over linear and computerised adaptive tests (CATs). A growing body of academic literature is available for researchers, however the practicalities of using MST for the design and delivery of real-world tests is still difficult to access. I hope this article provides a useful practical guide to test design and delivery.
 
-The advantages of splitting tests up into units of items called *modules* and directing candidates to modules based on their latent ability scores, provides a more efficient (and shorter) test delivery than a corresponding linear test, while also offering an easier method of assembly, and greater protection against test copying.
+The advantages of splitting tests up into units of items called *modules* and directing candidates to these modules based on their latent ability estimates, provides a more efficient test delivery than a corresponding linear test, whilst also offering an easier method of assembly, and greater protection against test copying.
 
 I'll assume some familiarity with Item Response Theory (IRT) - and the Rasch model. Some knowledge of programming with R would be useful to understand the examples given. For background information and primers on these subjects I provide references.
 
-My main focus is the development of tests for language learners, specifically English language learners. The theory and data processing involved can  be transferred to other domains that require measurement of latent ability. The IRT model that I focus on is the 1PL (or Rasch) model. For readers interested in extending analysis to more complex models, see [@magis2017computerized].
+My main focus is the development of tests for language learners, specifically English language learners. The theory and data processing involved can  be transferred to other domains that require measurement of latent ability. The IRT model that I focus on is the 1PL (or Rasch) model. For readers interested in extending analysis to more complex models, see @magis2017computerized.
 
-Developing a new test is a complex, multi-disciplinary task, involving specialist item writers, psychometricians, software engineers, validation experts and project managers. It is essential, before beginning any of this work to have a clear vision of what you are seeking to test, and the types of candidates that you will be targeting along with their needs. The main tasks when developing a new test wil include:
+Developing a new test is a complex, multi-disciplinary task, involving specialist item writers, psychometricians, software engineers, validation experts and project managers. It is essential, before beginning any of this work to have a clear vision of what you are seeking to test, and the types of candidates that you will be targeting along with their needs. The main tasks when developing a new test will include:
 
-* Blueprint and test specification
-* Test design
+* Blueprint, test specification and test design
 * Simulation
 * Item writing
-* Item Review and rating
-* Pilot/Live Trial
+* Item review and rating
+* Pilot/Live trial
 * Rasch modelling and item banking
-* Standard setting
+* Cut scores and scale scores
 * Live test
 
 Once the live test has been deployed, continual monitoring and adjustment of the test will be essential to ensure that it remains secure and delivers on the targetted goals over the long term.
@@ -55,7 +55,11 @@ Once the live test has been deployed, continual monitoring and adjustment of the
 
 When you deliver a test to a set of candidates, how can you be sure that you are measuring those candidates in the same way, even though the test administrated to one candidate has different items from that administered to another candidate?
 
-The underlying theoretical basis for MST is the branch of psychometrics known as Item Response Theory, or IRT. The theory proposes that there are *latent traits* (for example language ability) that can be measured using a set of tests delivered to the test candidate. These test items are typically scored as correct (1) or incorrect (0) - and it these dichotomous test types that we focus on here. The response to the test items can then be use to estimate the latent trait by fitting an IRT model. For MSTs, the test items are grouped into modules that can be delivered as separate but linked units in a test administration. Progression from module to module is dictated by the candidate's estimated ability, with cut-scores determining the next module to progress to.
+The underlying theoretical basis for MST is the branch of psychometrics known as Item Response Theory, or IRT. The theory proposes that there are *latent traits* (for example language ability) that can be measured using a set of items delivered to the test candidate. These test items are typically scored as correct (1) or incorrect (0) - and it is these dichotomous test types that we focus on here. It is also possible to offer polytomous test types (for example based on Likert scales), but we won't cover those in this article.
+
+The response to the test items can then be used to estimate the candidate's latent ability. This can be done by first fitting an IRT model that can then be used to make predictions about latent ability based on the item response. Once the latent ability estimate has been calculated, this can then be converted into a scale score, an ability summary, or both. The rest of this document provides practical examples of designing a multistage test, fitting an IRT model and calculating scores.
+
+MSTs differ from linear and CATs in that the test items are grouped into modules that can be delivered as separate but linked units as part of a test administration. Progression from module to module is dictated by the candidate's estimated ability, with cut-scores determining the next module to progress to.
 
 ### The Rasch Model
 
@@ -64,31 +68,38 @@ The simplest IRT model, the so-called *Rasch model*, applies logistic regression
 $$
 Pr(X_{ij} = 1|\theta_{i},b_{j}) = \frac{exp(\theta_{i} - b_{j})}{1+exp(\theta_{i} - b_{j})}
 $$
-$X$ is the item response (which is either 1 or 0 for the dichotomous tests we cover here), $\theta$ represents the latent ability being measured, and $b$ represents the difficulty of the item. Certain assumptions are made by the model, most importantly:
+$Pr(X_{ij} = 1)$ is the probability of a correct response, $\theta_i$ represents the latent ability of the candidate being measured, and $b_j$ represents the difficulty of item $j$. Certain assumptions are made by the model, most importantly:
 
 * Each item targets one and only one latent trait
 * The items are independent of one another
-* The response probability increases with the ability level using a logistic cumulative distribution function
+* The response probability increases with the ability level using the item response function desribed above
 
-This sigmoid function can be plotted as an Item Characteristic Curve (ICC). See below for three items of differing difficulties with ICCs plotted.
+The item response function is a logistic function with a characteristic sigmoid (or 'S' shape), and can be plotted for each item. Examples of these Item Characteristic Curves (ICCs) are given here:
 
 ![Logistic Function](images/icc.png)
 
-There is an equivalence between $\theta$ and $b$ such that a candidate with mean ability ($\theta = 0$) would be expected to get item 587 (blue) correct with a probability of 0.28. The less difficult item 583 (green) would have a probability of around 0.9 for a correct response for the same candidate. The right-most item, 868 (red) is the most difficult item.
+There is an equivalence between $\theta$ and $b$. In this example a candidate with mean ability ($\theta = 0$) would be expected to get item 587 (blue) correct with a probability of 0.28. The same candidate would have a a probability of 0.83 of getting the less difficult item 583 (green) correct. The further to the right the sigmoid is the more difficult the item is, with item 868 (red) being the most difficult of the three.
+
+The slope of the curve indicates how discriminating the item is. An item that is very discriminating will have a steep curve; one that is less discriminating will have a flatter curve. Highly discriminating items have more information. Ideally you want to have many discriminating items to be able to provide a lower error in your ability estimate. In general, the more items you are able to trial with the more information (and less error) you will have.
 
 An item that all candidates always get right because it is too easy, or they always get wrong because it's too hard has very little informative value for a test. It's telling you very little about the ability levels of your candidates. From this it follows that an item where half the candidates answer correct and the other half answer wrong has the most informational value; this is the point where $\theta$ and $b$ are equal. This relationship can be expressed by the Item Information Function (IIF). In the 1PL model the maximum value of the IIF is 0.25 (it can be different in the other models due to the influence of the $a$ parameter).
 
 ![Logistic Function](images/iif.png)
 
-
-The function is expressed as:
+The information function is expressed as:
 
 $$
 I_i(\theta, b_i) = P_i(\theta, b_i)Q_i(\theta, b_i)
 $$
 Where P is the probability of getting the item correct (for a given ability), and Q is the probability of getting it wrong.
 
-Greater information implies a smaller error of measurement. When designing a test it is important to deliver items with a range of difficulties that match the expected ability ranges so that you can accurately measure the your target candidates. In the above diagram you can see that item 587 (blue) is good at measuring candidates around ability level 0.95. Item 583 is better at measuring candidates with a lower ability level.
+As mentioned, greater information implies a smaller error of measurement. When designing a test it is important to deliver items with a range of difficulties that match the expected ability ranges so that you can accurately measure the your target candidates. In the above diagram you can see that item 587 (blue) is good at measuring candidates around ability level 0.95. Item 583 is better at measuring candidates with a lower ability level.
+
+# Blueprint and test specification
+
+When designing a multistage test, its important to ensure that items are written to the target ability that you want to measure.
+
+Modules need to be constructed in such a way that they target a specified ability range. We'll see later on how a Module Information Function can be used to help with module routing decisions. Also, routing needs to be designed with overlapping items between adjacent modules.
 
 ## IRT for Mulitstage Test Design
 
@@ -100,13 +111,17 @@ A typical modular design will look like this:
 
 This is an example of a 1-2-4 design, but others are possible. Important questions to answer during test design are what module topology to use and what should be the overall difficulty levels for each module (represented as the mean item difficulty, $\bar{b}$).
 
-In the pre-trial stage, it is possible to run simulations to help us answer these questions.
+## Panels
 
 A benefit of using modules is that items can be placed into modules and then delivered as parallel test forms called *panels*. Having multiple panels helps to reduce item exposure rate as previously seen panels can be precluded from selection for future test administrations. It also makes it easier to assemble tests. It is possible to place items in more than one panel, but its important to ensure that parallel panels are of equivalent difficulty.
 
 ![Panels](images/panels.svg)
 
 When constructed in this way each module can be considered as a module instance (for example Module A:3 being the instance of module A in panel 3),
+
+# Simulation
+
+In the pre-trial stage, it is advisable to run simulations to help us answer these questions about test design. It's always less expensive to make modifications to a design early on in the process, before significant investment in item writing and trialling has been made. The ability to simulate a test at the design phase can be used to understand the constraints of the design at an early stage and make changes in a low-cost, low-risk way. In this section we'll show how the `mstR` R package can be used to run simulations for a MST design. First we'll discuss the data sources that we'll be using.
 
 ## Data Sources and Management
 
@@ -118,7 +133,7 @@ The first class of these data sources is the one that is used to store item info
 * Modules
 * Panels
 
-In addition to the item information, another data source is used for the candidate information. This forms the candidate information service (CIS) that will be used for the test. In addition to storing a unique candidate ID, additional metadata of interest, such as the candidate's length of study or first language (L1), may be held by the CIS.
+In addition to the item information, another data source is used for the candidate information. This forms the candidate information system (CIS) that will be used for the test. In addition to storing a unique candidate ID, additional metadata of interest, such as the candidate's length of study or first language (L1), may be held by the CIS.
 
 Finally, test response data is required. Essentially this is a matrix containing rows of candidates and columns of items. Cells will contain a 1 (item answered correctly) or a 0 (item answered incorrectly). Items that were not presented (for example, from a module that was not in the test path for a candidate) are left blank and will be classed as NA.
 
@@ -126,15 +141,15 @@ This data may be stored as flat files (in CSV format for instance), or held in d
 
 ## MST Design Considerations
 
-I mentioned earlier that multi-stage test designs comprise a number of modules arranged into stages. The question then becomes, how many stages do I need, and how many modules in each stage do I want? We saw earlier an example of a simple 1-2-4 design.
+I mentioned earlier that multistage test designs comprise a number of modules arranged into stages. The question then becomes, how many stages do I need, and how many modules in each stage do I want? We saw earlier an example of a simple 1-2-4 design.
 
-This design may not be sufficient for your needs. You need to consider whether there are groups of items that naturally fit into a particular stage (for example, seperating reading or listening tasks into seperate stages). You also need to consider how many items per stage you want to have. Also, in order for the routing between modules to produce acceptable results, you need to consider the relative difficulty of each module.
+This design may not be sufficient for your needs. You need to consider whether there are groups of items that naturally fit into a particular stage (for example, separating reading or listening tasks into separate stages). You also need to consider how many items per stage you want to have. Also, in order for the routing between modules to produce acceptable results, you need to consider the relative difficulty of each module.
 
 Normally the so-called routing module in stage 1 (Module A) would contain a mix of items with a mean difficulty of 0 (in other words 'medium' difficulty). Candidates that are placed in the lower ability range at the end of this module will be routed to the 'easy' module in stage 2 (Module B), and those in the upper ability range to the 'hard' module (Module C).
 
 ## Pre-Trial Simulation and Design
 
-An initial simulation of your test to try out designs can be done by using the `mstR` library (see @magis2017computerized). Here the aim is to select a set of designs and see if there is an optimal design. It will also help understand how the scoring of the test should be implemented, including the number correct (NC) scores that will be used for routing, and the ability estimates for final scoring and reporting.
+An initial simulation of your test to experiment with different designs can be done by using the `mstR` library (see @magis2017computerized). Here the aim is to select a set of designs and see if there is an optimal design. It will also help understand how the scoring of the test should be implemented, including the number correct (NC) scores that will be used for routing, and the ability estimates for final scoring and reporting.
 
 The `mstR` library can take an existing set of item responses, or you can use it to generate a set of randomised simulated item responses. This latter ability is useful in the pre-trial stage where we're interested in finding out how routing between modules should be established, or to validate assumptions in the test design.
 
@@ -142,19 +157,25 @@ The aim here is to sift several different test designs; and re-run simulations e
 
 ### Module Setup
 
-With `mstR` we can define:
+With `mstR` it is possible to define:
 
 * the module topology (number of stages and modules per stage)
-* the number of items per module and the module difficulty
+* the number of items per module and the average module difficulty
 * the IRT model to use
 
-If we start out with the 1-2-4 design shown above, based on our test requirements, we can create a simultion for the test design with the following elements:
+Assuming the 1-2-4 pattern shown above, a simulation for the test design can be created from following elements:
 
-* a simulated item bank, `it.MST`
-* the modules and the items they contain, `modules`
-* the routing rules in the transition matrix `routing`
+* a simulated item bank
+* the modules and the items they contain
+* the routing rules in the transition matrix
+
+Average difficulty levels for each module are shown below (where $\bar{b}$ is the mean difficulty of the module, and a standard deviation of 1 is assumed)
 
 ![MST Design](images/module-items.svg)
+
+#### The Simulated Item Bank
+
+Here we create a set of items `it.MST` using difficulties from a normal distribution:
 
 ```{r module difficulties, echo=TRUE}
 it.MST <- rbind(genDichoMatrix(12, model = "1PL", bPrior = c("norm", 0.0, 1)),
@@ -167,7 +188,10 @@ it.MST <- rbind(genDichoMatrix(12, model = "1PL", bPrior = c("norm", 0.0, 1)),
 it.MST <- as.matrix(it.MST)
 ```
 
-Here we've decided to use the 1PL (or Rasch) model, so we need to supply `bPrior` difficulty distributions, and convert the data frame into a matrix. We'll end up with a matrix of 68 items, each with randomised difficulty parameters. A test will comprise 30 items (12 + 8 + 10).
+Here we've decided to use the 1PL (or Rasch) model, so we need to supply `bPrior` difficulty distributions, and convert the data frame into a matrix. The `bPrior` parameter is constructed using a normal distribution with a given $\bar{b}$ and standard deviation of 1.
+We'll end up with a matrix of 68 items, each with randomised difficulty parameters. A test will comprise 30 items (12 + 8 + 10).
+
+#### Assigning Items to Modules
 
 Selecting items into the modules is done by creating another matrix with 68 rows (items) and 7 columns (modules); a cell containing a 1 indicates membership of an item in a module.
 
@@ -182,7 +206,11 @@ modules[49:58, 6] <- 1
 modules[59:68, 7] <- 1
 ```
 
-The final part of the design activity is construction of the routing rules, which is done by creating an $R \times R$ *transition matrix* which shows the valid paths to modules in the next stage and where $R$ is the number of modules. A value of 1 indicates that a path exists from module $i$ to module $j$ in the matrix.
+#### Module Routing
+
+The final part of the design activity is construction of the routing paths and cut-offs used for next module selection. This is done by creating an $R \times R$ *transition matrix* which shows the valid paths to modules in the next stage (where $R$ is the number of modules). A value of 1 in the `routing` matrix in the code sample below indicates that a path exists from module $i$ to module $j$. To use the example below the rule `routing[1, 2:3] <- 1` means module 1 routes to modules 2 and 3.
+
+In addition to the routing paths, a set of cut-off criteria must be given. These are expressed in terms of $\hat{theta}$ using the `cutoff` matrix. To use an example here, the rule `cutoff[2,] <- c(-Inf, 0.0)` means that candidates with ability estimates from minus infinity to zero will be routed to module 2. The rule `cutoff[3,] <- c(0.0, Inf)` means that candidates with ability estimates from zero to plus infinity will be routed to module 3.
 
 ```{r module routing, echo=TRUE}
 routing <- matrix(0, 7, 7)
@@ -203,7 +231,9 @@ cutoff[7,] <- c(1.0, Inf)
 
 As can be seen, modules 4-7 (Module D to Module G in the design) are final stage modules, so do not route onward.
 
-Having created a simulated item bank for the design, it is possible to generate simulated item responses by selecting a $\theta$ for a simulated candidate:
+### Test Simulation
+
+Having created a simulated item bank for the design, it is possible to generate simulated item responses by selecting a $\theta$ for a simulated candidate and running the `genPattern()` function to return a set of simulated item responses:
 
 ```{r simulated test response, echo=TRUE}
 theta <- 0.95
@@ -213,23 +243,24 @@ dfSampleResponse <- genPattern(theta, it.MST)
 (dfSampleResponse)
 ```
 
-Here we use a $\theta$ of `r theta`. Note that this doesn't really simulate a true MST test, as it ignores the routing rules and simply returns a response for all items in the simulated item bank. We can however use the `randomMST()` function to perform a more realistic simulation. The `randomMST()` function will generate a response pattern for a given simulated item bank, an MST structure, and a true ability level ($\theta$). We'll use maximum likelihood estimation (`"ML"`) for ability estimation, and the maximum Fisher information criterion (`"MFI"`) for module selection.
+Here we use a $\theta$ of `r theta` as an example. Note that this doesn't really simulate a true MST test, as it ignores the routing rules and simply returns a response for all items in the simulated item bank. We can however use the `randomMST()` function to perform a more realistic simulation. The `randomMST()` function will generate a response pattern for a given simulated item bank, an MST structure, and a true ability level ($\theta$). We'll use Bayesian model estimation (`"BM"`) for ability estimation (the default ability estimation method for the `mstR` library). The maximum Fisher information criterion (`"MFI"`) for is used for module selection; again this is the default. The Fisher information is the measure of the amount of information that item $X$ carries about the unknown ability parameter $\theta$.
 
 ```{r simulated MST test response, echo=TRUE}
 start <- list(theta = theta)
-test <- list(method = "ML", moduleSelect = "MFI")
-final <- list(method = "ML")
+test <- list(method = "BM", moduleSelect = "MFI")
+final <- list(method = "BM")
 
 dfMSTResponse <- randomMST(trueTheta = theta, 
-                           itemBank = it.MST, modules = modules, transMatrix = routing,
+                           itemBank = it.MST, 
+                           modules = modules, transMatrix = routing,
                            start = start, test = test, final = final)
 
 (dfMSTResponse)
 ```
 
-For this simluated candidate with a true $\theta$ = `r dfMSTResponse$trueTheta`, the estimated ability $\hat{\theta}$ = `r dfMSTResponse$thFinal`.
+For this simuluted candidate with a true $\theta$ = `r dfMSTResponse$trueTheta`, the estimated ability $\hat{\theta}$ = `r dfMSTResponse$thFinal`. Note that the output from the `randomMST` function uses the module and item indices (rather than names), so you will want to map these back to a name for ease of interpretation.
 
-The Module Information Function is used to determine the 'best' (ie. the most informative) module to route to in the next stage. In this example the selected modules are `r dfMSTResponse$selected.modules`. A plot can be made as follows, showing the highlighted route through the multi-stage test:
+The Module Information Function is used to determine the 'best' (that is the most informative) module to route to in the next stage. In this example the selected modules are `r dfMSTResponse$selected.modules`. A plot can be made as follows, showing the highlighted route through the multi-stage test:
 
 ```{r show simulated test, echo=FALSE}
 plot(dfMSTResponse)
@@ -237,9 +268,9 @@ plot(dfMSTResponse)
 
 ### Running Repeated Simulations
 
-We can run repeated simulations varying the topology of the test (for example changing the 1-2-4 design presented earlier). Or by changing the number of items per module, the mean difficulty levels, or some other aspect of the model. By calculating the differences between estimated and true ability levels we can see which set of parameters is optimal.
+We can run repeated simulations varying the topology of the test (for example changing number of stages and modules). Or by changing the number of items per module, the mean difficulty levels, or some other aspect of the model. By calculating the differences between estimated and true ability levels we can see which set of test features is optimal.
 
-In this example we'll change the number of items per module; keeping the total number constant, but changing the relative number of items as follows:
+In this example we'll change the number of items per module; keeping the total number of items administered constant, but changing the relative number of items as follows:
 
 | Design | Stage 1 | Stage 2 | Stage 3 | Total |
 | ------ | ------: | ------: | ------: | ----: |
@@ -250,7 +281,7 @@ In this example we'll change the number of items per module; keeping the total n
 | 5      | 8       | 10      | 12      | 30    |
 | 6      | 8       | 12      | 10      | 30    |
 
-The `mstDesign()` function is used to generate the set of test designs, by varying the number of items for each module by stage.
+We define the `mstDesign()` function to generate the set of test designs we want to investigate. This function varies the number of items for each module by stage and can be repeatedly applied to the set of designs in the `stages` list. It effectively generates variants of the test design presented above in \@ref(module difficulties).
 
 ```{r MST designs}
 mstDesign <- function(stage, difficulties) {
@@ -289,15 +320,15 @@ stages <- list(c(12,8,10), c(12,10,8), c(10,12,8),
 testDesigns <- lapply(stages, mstDesign)
 ```
 
-To run the simulations we'll create a set of 8,550 simulated candidates with ability range -2.5 to 2.5 (stepped in increments of 0.25). Then we'll repeat for each of the six designs above, with the same item bank.
+To run the simulations we'll create a set of 7,650 simulated candidates with ability range -4 to 4 (stepped in increments of 0.5). Then we'll repeat for each of the six designs above, with the same item bank.
 
 ```{r setup simulation}
-simulation.levels <- seq(-2.5, 2.0, 0.25) # 19 ability levels
-simulation.candidates <- rep(simulation.levels, each = 450) # 19 * 450 = 8550 simulated candidates
+simulation.levels <- seq(-4, 4, 0.5)
+simulation.candidates <- rep(simulation.levels, each = 450)
 simulation.responses <- matrix(NA, length(simulation.candidates), 6)
 simulation.start <- list(theta = 0)
-simulation.test <- list(method = "ML", moduleSelect = "MFI")
-simulation.final <- list(method = "ML")
+simulation.test <- list(method = "BM", moduleSelect = "MFI")
+simulation.final <- list(method = "BM")
 ```
 
 We'll then loop over each design, running the `randomMST()` function to simulate a test.
@@ -316,7 +347,7 @@ for (j in 1:6) {
 
 #### ASB and RMSE values
 
-The results can now be graphed, with averaged signed bias (ASB) and root mean squared error (RMSE) values calculated for each design and for each ability level. ASB is the mean difference between estimated and true ability levels, and RMSE is the square root of the mean of the squared differences between estimated and true ability levels. With both measures, lower is better.
+The results can now be graphed. Following @ippel2020efficient and @magis2017computerized we compute the averaged signed bias (ASB) and root mean squared error (RMSE) values for each design and for each ability level. ASB is the mean difference between estimated and true ability levels. RMSE is the square root of the mean of the squared differences between estimated and true ability levels. With both measures, lower is better.
 
 ```{r simulation results}
 simulation.ASB <- simulation.RMSE <- matrix(NA, length(simulation.levels), 6)
@@ -339,53 +370,55 @@ dfRMSE$theta <- simulation.levels
 ```
 
 ```{r simultation graphs}
-cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00")
-
 ggplot(data = dfASB, aes(x = theta)) +
-  scale_y_continuous(limits = c(-1, 5)) +
-  geom_line(aes(y = X1, colour=cbPalette[1])) + 
-  geom_line(aes(y = X2, colour=cbPalette[2])) +
-  geom_line(aes(y = X3, colour=cbPalette[3])) +
-  geom_line(aes(y = X4, colour=cbPalette[4])) +
-  geom_line(aes(y = X5, colour=cbPalette[5])) +
-  geom_line(aes(y = X6, colour=cbPalette[6])) +
+  geom_line(aes(y = X1)) + 
+  geom_line(aes(y = X2)) +
+  geom_line(aes(y = X3)) +
+  geom_line(aes(y = X4)) +
+  geom_line(aes(y = X5)) +
+  geom_line(aes(y = X6)) +
+  geom_hline(yintercept = 0.0, linetype="dotted") +
   labs(x = "theta", y = "ASB")
 
 ggplot(data = dfRMSE, aes(x = theta)) +
-  scale_y_continuous(limits = c(-1, 5)) +
-  geom_line(aes(y = X1, colour=cbPalette[1])) + 
-  geom_line(aes(y = X2, colour=cbPalette[2])) +
-  geom_line(aes(y = X3, colour=cbPalette[3])) +
-  geom_line(aes(y = X4, colour=cbPalette[4])) +
-  geom_line(aes(y = X5, colour=cbPalette[5])) +
-  geom_line(aes(y = X6, colour=cbPalette[6])) +
+  geom_line(aes(y = X1)) + 
+  geom_line(aes(y = X2)) +
+  geom_line(aes(y = X3)) +
+  geom_line(aes(y = X4)) +
+  geom_line(aes(y = X5)) +
+  geom_line(aes(y = X6)) +
   labs(x = "theta", y = "RMSE")
 ```
+Both these graphs show that there is no variation between the different designs - they all show a similar pattern, with overestimation for higher ability levels.
 
-See chapter 7 of [@magis2017computerized] for details, or check out the [CRAN page](https://cran.r-project.org/web/packages/mstR/index.html) for `mstR`.
+For more details on how to run simulations like this see chapter 7 of [@magis2017computerized], or check out the [CRAN page](https://cran.r-project.org/web/packages/mstR/index.html) `mstR` package.
 
 ## Trialling and Test Validation
 
-Once the parameters of the test design are well established, the test designers should have a good idea of the number of modules, items and relative difficulties required. 
+Once the parameters of the test design are well established, the test designers should have a good idea of the number of modules, items and relative difficulties required. Where possible the simplest design is preferred. In our case there is no one design that is clearly better than the others, so we'll go with our design 1:
+
+| Design | Stage 1 | Stage 2 | Stage 3 | Total |
+| ------ | ------: | ------: | ------: | ----: |
+| 1      | 12      | 8       | 10      | 30    |
 
 ### Item Writing and Intial Validation
 
-A process of item writing will then be undertaken. Subject matter experts (SMEs) will be brought in to help define the instructions of test writers, and a set of items will then be created by the team of item writers. To take our test design example, we'll establish the number of items for each module that will be required at each CEFR level.
+A process of item writing will then be undertaken. Subject matter experts (SMEs) will be brought in to help define the instructions for test writers. A set of items will then be created by the team of item writers. To take our test design example, we'll establish the number of items for each module that will be required at each CEFR level.
 
-In general the test designers will want to ensure that each module contains a balance of items of varying difficulty. The Common European Frame of Reference (CEFR) is used to assign items into different ability levels.
+In general, the test designers will want to ensure that each module contains a balance of items of varying difficulty within the target ability range for each module. The Common European Frame of Reference (CEFR) is used to assign items into different ability levels (A1-C2).
 
 ![Module A Items](images/moduleA-items.svg)
-A group of raters will be used to validate items and ensure that they are set at the correct ability level. Rating sheets are then collated and a decision then made on the CEFR ability rating for each item in the item bank. Various methods can be used to converge on an agreed ability level for each item; the simplest is to find the modal ability level (ie. the most frequently occurring) from all your raters. Where there is no single mode, or there are wide diagreements between raters, a manual adjustment to a commonly agreed ability level may be required. Ideally at least 5 raters would be used for each item to avoid this as far as possible.
+A group of raters will be used to validate items in a level panel exercise, and ensure that they are set at the correct target difficulty level. Rating sheets are then collated and a decision then made on the CEFR rating for each item in the item bank. Various methods can be used to converge on an agreed difficulty level for each item; the simplest is to find the modal (ie. the most frequently occurring) from all your raters. Where there is no single mode, or there are wide disagreements between raters, a manual adjustment to a commonly agreed difficulty level that is close to the average may be required. Ideally at least 5 raters would be used for each item to avoid this as far as possible.
 
-Once ability levels are agreed, they can be used to update the item bank.
+Once difficulty levels are agreed, they can be used to update the item bank. Then it is a matter of assigning items to each module according to the test design.
 
 ### Initial Trial
 
-The purpose of the initial trial is to administer a test to a cohort of test candidates. Care should be taken to ensure that this cohort is representative of the target candidature. The test response can then be used to calculate item difficulties using the selected IRT model. We'll use the 1PL (Rasch) model in the examples that follow. 
+The purpose of the initial trial is to administer a test to a cohort of test candidates. Care should be taken to ensure that this cohort is representative of the target candidature. The test response can then be used to calibrate item difficulties using the selected IRT model. We'll use the 1PL (Rasch) model in the examples that follow. 
 
 #### Import and validation of trial data
 
-The trial data is usually received as CSV or Excel files that comprise a candidate ID and then a set of responses (0 or 1) for each item. Not all items may have been taken by each candidate so there is a good chance of NA values occurring. Data validation and cleansing is a key part of preparing the data from the field trial so that it can be used in a Rasch analysis.
+The trial data is usually received as CSV or Excel files that comprise a candidate ID and then a set of responses (0 or 1) for each item. Not all items will have been taken by each candidate so there will be many NA values occurring. Data validation and cleaning to make sure the data from the field is correct and in the right format for processing are a key part of preparing the data from the trial so that it can be used in a Rasch analysis.
 
 ```{r}
 dfTestResponses <- read_csv('trial-data.csv')
@@ -397,7 +430,7 @@ The `ltm` library can be used to fit a number of dichotomous and polytomous IRT 
 
 #### Consistency and reliability
 
-We want to make sure that our modules are internally consistent and reliable as tests of a given ability. In our test we've grouped various skills or abilities into the various stages. So, stage 1 (ie. Module A) is designed as a test of language use, stage 2 (Modules B and C) is designed to measure reading skills, and stage 3 is designed to measure listening skills. The overall test is designed to measure English language ability in non-native learners of English.
+We want to make sure that our modules are internally consistent and reliable as tests of a given latent trait. In our test we've grouped various skills or abilities into the different stages. So, stage 1 (ie. Module A) is designed as a test of language use, stage 2 (Modules B and C) is designed to measure reading skills, and stage 3 is designed to measure listening skills. The overall test is designed to measure English language ability in non-native learners of English.
 
 Cronbach's alpha is a function of the number of items in a test, the average covariance between pairs of items, and the variance of the total score. It is defined as:
 
@@ -405,11 +438,11 @@ $$
 \alpha = \frac{p \times \bar{r}}{1 + (p – 1)\bar{r}}
 $$
 
-Here, $p$ is the number if items and $\bar{r}$ is the average of all covariances between items.
+Here, $p$ is the number of items and $\bar{r}$ is the average of all covariances between items.
 
 In our test we've split our items into different modules according to the skill that is being measured, so it makes sense to calculate alphas for each module, although we could also do so by stage if we wanted. We need to make sure that we remove any rows containing NA values before calculating Cronbach's alpha.
 
-```{r Cronbachs alpha}
+```{r Cronbachs alpha, echo=FALSE}
 # drop the Candidate column, it's not required for the IRT functions
 dfTrial <- dplyr::select(dfTestResponses, -Candidate)
 
@@ -459,7 +492,7 @@ ggplot(dfCronbachsAlpha, aes(x=alpha, y=num_responses, size = num_items, color =
     labs(x = "alpha", y = "# responses") +
     geom_vline(xintercept = 0.7, linetype="dotted")
 ```
-Ideally we're looking for alphas of 0.7 and above; less than this indicates that there is weak covariance between the items in the module, which means they may not be testing the same ability. This measure is really only useful as a guide for further investigations; the ultimate decision on whether to modify the items in each module should be taken in collaboration with the raters and other subject matter experts.
+Ideally we're looking for alphas of 0.7 and above; less than this indicates that there is weak covariance between the items in the module, which means they may not be testing the same trait. This measure is really only useful as a guide for further investigations; the ultimate decision on whether to modify the items in each module should be taken in collaboration with the subject matter experts.
 
 ```{r Rasch model}
 # fit the Rasch model
@@ -468,13 +501,9 @@ raschmodel <- ltm::rasch(dfTrial, constraint = cbind(length(dfTrial) + 1, 1),
 rasch_summary <- summary(raschmodel)
 ```
 
-#### Updating the item bank
-
-Once difficulty coefficients have been calculated by fitting the Rasch model, the item bank should be updated to reflect this. The item difficulty ($b$ parameter) is a key component of the item, and should be stored along with the other information about the item. If a 2PL model is being used, then the infomation ($a$ parameter) would also be stored.
-
 ### Item Difficulty
 
-The item difficulty parameters $b_{i}$ are returned and then output to show the spread of difficulties.
+The item difficulty parameters $b_{i}$ are returned and then output to show the spread of difficulties. This is a useful way of gauging whether there are any outlier items that should be rejected. Items where there is no mix of 1s and 0s will show very extreme difficulty levels as the information for these items is extremely low.
 
 ```{r Item difficulties}
 df_difficulties <- rasch_summary$coefficients
@@ -486,10 +515,6 @@ df_displayDifficulties <- data.frame(
 df_displayDifficulties <- df_displayDifficulties %>%
   filter(str_detect(item_id, "(Item[0-9]+)"))
 
-# normalise difficulties that are outside normal ranges
-df_displayDifficulties$b[df_displayDifficulties$b < -4] <- -4
-df_displayDifficulties$b[df_displayDifficulties$b > 4] <- 4
-
 ggplot(data = na.omit(df_displayDifficulties)) +
   geom_bar(mapping = aes(x = reorder(item_id, -b), y = b), stat = "identity", fill = "cornflowerblue") +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
@@ -498,7 +523,7 @@ ggplot(data = na.omit(df_displayDifficulties)) +
 
 ### Banking the Updated Difficulty Parameters
 
-Now that the model has been fitted, the difficulties derived from the Rasch model can be used to update the item bank.
+Once difficulty values have been calculated by fitting the Rasch model, the item bank should be updated to reflect this. The item difficulty ($b$ parameter) is a key component of the item, and should be stored along with the other information about the item. If a 2PL model is being used, then the discrimination ($a$ parameter) would also be stored.
 
 ```{r Item banking}
 # output a CSV file with the item difficulties
@@ -519,11 +544,11 @@ ggplot(itemPlot, aes(x=theta, y=probability)) +
   geom_line() +
   labs(title="Item Characteristic Curve", x="θ", y="P(X=1)")
 ```
-This is the item characteristic curve (ICC), in this case for the seventh item in the trial data, `r itemID` with difficulty $b$ = `r itemDifficulty`.
+In this example we see the item characteristic curve (ICC) for `r itemID` with difficulty $b$ = `r itemDifficulty`.
 
 ### Module Characteristic Curves (MCCs)
 
-You can sum the ICCs for all items in a module to get a Module Characteristic Curve (MCC) that expresses the difficulty for that module. These graphs show the relative difficulty of each module. They can be used to calibrate the modules so they are in line with the assumptions about module difficulty.
+You can sum the ICCs for all items in a module to get a Module Characteristic Curve (MCC) that expresses the difficulty for that module. These graphs show the relative difficulty of each module. They can be used to calibrate the modules so they are in line with the assumptions about module difficulty. The range of the difficulty of items as well as the mean module difficulty should also be taken into account.
 
 First we'll create a helper function called `trueScoreSummary` to help get the plot data from the `ltm` package into the format we can use for visualisations with ggplot.
 
@@ -588,6 +613,10 @@ ggplot(plotData, aes(x=theta, y=trueScore)) +
   labs(title="Module Characteristic Curve", x="θ", y="True Score")
 ```
 This is already showing us something a little weird. Our D (very easy) module is actually a little bit more difficult than our F (moderately hard) module at the top end of the scale. And the E (moderately easy) module is more difficult than the G (very hard) module. All of the modules are quite similar in terms of difficulty (the MCCs are quite close to each other), and moreover the lines are quite flat - there is little discrimination between them. We'll see how this can be expressed more obivously in the next section.
+
+## Cut scores and scale scores
+
+In this section we'll show how to use the Module Information Function (MIF) to derive cut scores for module progression, and also how to build a scale scoring system for the test.
 
 ### Item Information Functions (IIFs)
 
