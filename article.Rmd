@@ -8,11 +8,9 @@ date: "`r Sys.Date()`"
 output:
   pdf_document:
     toc: true
-    toc_depth: 2
-    highlight: haddock
+    highlight: pygments
     latex_engine: lualatex
-  word_document: default
-  html_document: default
+    fig_width: 5
 version: 1
 description: |
   A practical guide to the design and development of computerised multistage tests.
@@ -77,7 +75,7 @@ $Pr(X_{ij} = 1)$ is the probability of a correct response, $\theta_i$ represents
 
 The item response function is a logistic function with a characteristic sigmoid (or 'S' shape), and can be plotted for each item. Examples of these Item Characteristic Curves (ICCs) are given here:
 
-![Logistic Function](images/icc.png)
+![Item Characteristic Curves](images/icc.png)
 
 There is an equivalence between $\theta$ and $b$. In this example a candidate with mean ability ($\theta = 0$) would be expected to get item 587 (blue) correct with a probability of 0.28. The same candidate would have a a probability of 0.83 of getting the less difficult item 583 (green) correct. The further to the right the sigmoid is the more difficult the item is, with item 868 (red) being the most difficult of the three.
 
@@ -85,7 +83,7 @@ The slope of the curve indicates how discriminating the item is. An item that is
 
 An item that all candidates always get right because it is too easy, or they always get wrong because it's too hard has very little informative value for a test. It's telling you very little about the ability levels of your candidates. From this it follows that an item where half the candidates answer correct and the other half answer wrong has the most informational value; this is the point where $\theta$ and $b$ are equal. This relationship can be expressed by the Item Information Function (IIF). In the 1PL model the maximum value of the IIF is 0.25 (it can be different in the other models due to the influence of the $a$ parameter).
 
-![Logistic Function](images/iif.png)
+![Item Information Functions](images/iif.png)
 
 The information function is expressed as:
 
@@ -108,7 +106,7 @@ IRT is used to inform calibration of the test items after they've been developed
 
 A typical modular design will look like this:
 
-![MST Design](images/modules.svg)
+![MST Design](images/modules.png)
 
 This is an example of a 1-2-4 design, but others are possible. Important questions to answer during test design are what module topology to use and what should be the overall difficulty levels for each module (represented as the mean item difficulty, $\bar{b}$).
 
@@ -116,7 +114,7 @@ This is an example of a 1-2-4 design, but others are possible. Important questio
 
 A benefit of using modules is that items can be placed into modules and then delivered as parallel test forms called *panels*. Having multiple panels helps to reduce item exposure rate as previously seen panels can be precluded from selection for future test administrations. It also makes it easier to assemble tests. It is possible to place items in more than one panel, but its important to ensure that parallel panels are of equivalent difficulty.
 
-![Panels](images/panels.svg)
+![Panels](images/panels.png)
 
 When constructed in this way each module can be considered as a module instance (for example Module A:3 being the instance of module A in panel 3),
 
@@ -172,7 +170,7 @@ Assuming the 1-2-4 pattern shown above, a simulation for the test design can be 
 
 Average difficulty levels for each module are shown below (where $\bar{b}$ is the mean difficulty of the module, and a standard deviation of 1 is assumed)
 
-![MST Design](images/module-items.svg)
+![MST Design](images/module-items.png)
 
 #### The Simulated Item Bank
 
@@ -408,7 +406,7 @@ A process of item writing will then be undertaken. Subject matter experts (SMEs)
 
 In general, the test designers will want to ensure that each module contains a balance of items of varying difficulty within the target ability range for each module. The Common European Frame of Reference (CEFR) is used to assign items into different ability levels (A1-C2).
 
-![Module A Items](images/moduleA-items.svg)
+![Module A Items](images/moduleA-items.png)
 A group of raters will be used to validate items in a level panel exercise, and ensure that they are set at the correct target difficulty level. Rating sheets are then collated and a decision then made on the CEFR rating for each item in the item bank. Various methods can be used to converge on an agreed difficulty level for each item; the simplest is to find the modal (ie. the most frequently occurring) from all your raters. Where there is no single mode, or there are wide disagreements between raters, a manual adjustment to a commonly agreed difficulty level that is close to the average may be required. Ideally at least 5 raters would be used for each item to avoid this as far as possible.
 
 Once difficulty levels are agreed, they can be used to update the item bank. Then it is a matter of assigning items to each module according to the test design.
