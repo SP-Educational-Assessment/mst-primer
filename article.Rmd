@@ -657,7 +657,7 @@ plotData <- informationCoefficients(plot(raschmodel,
 
 ggplot(plotData, aes(x=theta, y=information)) + 
   geom_line(aes(colour=module)) +
-  labs(title="Module Characteristic Curve", x="θ", y="I(θ)")
+  labs(title="Module Information Function", x="θ", y="I(θ)")
 ```
 You can see that the maximum information point Module A is pretty close to $\theta = 0$.
 
@@ -676,7 +676,7 @@ plotData <- rbind(
 
 ggplot(plotData, aes(x=theta, y=information)) + 
   geom_line(aes(colour=module)) +
-  labs(title="Module Characteristic Curve", x="θ", y="I(θ)") +
+  labs(title="Module Information Function", x="θ", y="I(θ)") +
   geom_vline(xintercept = 0.81, linetype="dotted")
 ```
 Here we can see that there is point of intersection between modules B and C. This suggests, that candidates who have a $\hat\theta < 0.81$ in Module A should be routed to Module B, and all others routed to Module C.
@@ -701,7 +701,7 @@ plotData <- rbind(
 
 ggplot(plotData, aes(x=theta, y=information)) + 
   geom_line(aes(colour=module)) +
-  labs(title="Module Characteristic Curve", x="θ", y="I(θ)")
+  labs(title="Module Information Function", x="θ", y="I(θ)")
 
 
 plotData <- rbind(
@@ -721,7 +721,7 @@ plotData <- rbind(
 
 ggplot(plotData, aes(x=theta, y=information)) + 
   geom_line(aes(colour=module)) +
-  labs(title="Module Characteristic Curve", x="θ", y="I(θ)")
+  labs(title="Module Information Function", x="θ", y="I(θ)")
 ```
 
 
