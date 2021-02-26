@@ -632,51 +632,33 @@ We could provide candidates with their $\hat{\theta}$ at test end but most candi
 
 Before we get to that point however we'll cover the case where the test administration system is unable to calculate the theta estimate and we need to provide a true score to scale score mapping. We do this by first converting true score to theta estimate, and then mapping the theta estimate on to a scale score. True score is simply the number correct for a given module.
 
-### Converting True Score to Theta
+#### Converting True Score to Theta
 
 Recall that the MCCs provide a mapping from the number of correct scores for each module to $\hat{\theta}$. A quintic polynomial can be used to fit the MCC, and the resulting coefficients then used by the test administration system to provide an ability estimate at the end of each module. The scale scores can then be used to provide an aggregated test score once the final stage of the MST has completed.
 
-### Module A Mapping Function, $g_{A1}()$
+#### Module A Mapping Function, $g_{A}()$
 
-First we use a polynomial regresssion to fit a set of coefficients to the Rasch model.
+We'll use a polynomial regression to fit a set of coefficients to the MCC.
 
 ```{r Module A True Scores, echo=FALSE}
 df_moduleA_TS <- trueScoreSummary(plot(raschmodel, type = "ICC", items = moduleA1_items, plot = FALSE))
 
-# use a quintic polynomial regression model to make predictions
+# use a quintic polynomial regression to model the MCC
 lm_moduleA_scores_poly <- lm(theta ~ poly(trueScore, degree=5, raw=TRUE), data = df_moduleA_TS)
 
-# setup the score scale for module A
-moduleA_TSRange <- data.frame(
-  trueScore = c(seq(0,20)),
-  theta = c(rep(0, 21))
-)
-
-# plot the theta/true score curve from the Rasch model
-plot(x=df_moduleA_TS$theta, y=df_moduleA_TS$trueScore, 
-     type="l", col = "coral1", main="Module A", xlab="θ", ylab="True Score")
-
-# overlay the polynomial mapped true score points
-scaleScores_moduleA_poly <- predict(lm_moduleA_scores_poly, moduleA_TSRange)
-moduleA_TSRange$theta <- unname(scaleScores_moduleA_poly)
-points(x=moduleA_TSRange$theta, y=moduleA_TSRange$trueScore, col="cornflowerblue", pch=4)
-
-legend(2, 9, legend=c("MCC", "Quintic Poly Function"),
-  col=c("coral1", "cornflowerblue"), lty=1:2, cex=0.8)
-
+# show a summary of the polynomial regression
 summary(lm_moduleA_scores_poly)
 ```
 
 The model looks good for our use. From this we can get the coefficients (terms) that will be used for the polynomial function.
 
 ```{r Module A True Score Function}
-options(scipen = 1, digits = 3)
 gA_coeffs <- unname(coef(lm_moduleA_scores_poly))
 
 (gA_coeffs)
 ```
 
-The Avellain developers, when they want to calculate the ability for a candidate could use such a function to map from the number correct (NC) score to an estimated theta for candidate $i$: $\hat\theta_i$. For example, using R:
+The test development team, when they want to calculate the ability for a candidate could use such a function to map from the number correct (NC) score to an estimated theta for candidate $i$: $\hat\theta_i$. For example, using an R function this would be:
 
 ```{r}
 gA1 <- function(x) {
@@ -686,7 +668,8 @@ gA1 <- function(x) {
 
 So, a candidate who scores 13 out of 20 on module A would have a $\hat\theta$ = `r gA1(13)`.
 
-### Validating the Mapping Function
+#### Validating the Mapping Function
+
 We can now use this function to overlay the original MCC:
 
 ```{r}
@@ -700,54 +683,43 @@ plot(x=df_moduleA_TS$theta, y=df_moduleA_TS$trueScore,
      type="l", col = "coral1", main="Module A", xlab="θ", ylab="True Score")
 moduleA_TSRange$theta <- gA1(moduleA_TSRange$trueScore)
 points(x=moduleA_TSRange$theta, y=moduleA_TSRange$trueScore, col="purple", pch=4)
-legend(2, 9, legend=c("MCC", "gA1()"),
+legend(2, 9, legend=c("MCC", "gA()"),
   col=c("coral1", "purple"), lty=1:2, cex=0.8)
 ```
 We can see that it is a good fit, both in the middle of the range, and importantly at the upper and lower bounds.
 
-### Module D-H Mapping Functions, $g_{D1}(), g_{E1}(), g_{F1}, g_{G1}(), g_{H1}()$
+We then need to go through each module in every panel and create a true score mapping function for each. These functions, or the lookup-tables that they can be used to generate, will then need to be provided to the developers of the test delivery software so that they can be used to calculate theta estimates and scale scores for each module.
+
+#### Scale Scoring Function, $s()$
+
+A scale score function can then be created to map the $\hat{\theta}$ to a score that will be reported back to the candidate and the testing institute. Typically a summary of capability such as a CEFR rating will also be provided with the scale score.
+
+The test administrators may want to create different scale score functions for each stage of the MST, although the simplest approach is to just have a single one. A straightforward scaling function to use is to simply normalise the ability estimate for a candidate to a range 0-1 and then apply a multiplier constant $k$:
+
+$$
+s(\hat{\theta}_i) = k\frac{\hat{\theta}_i - min(\theta)}{max(\theta) - min(\theta)}
+$$
+
+Usually the scale score would be rounded to a whole number. For example, in R the scaling function might look like this:
 
 ```{r}
-df_moduleD_TS <- trueScoreSummary(plot(raschmodel, type = "ICC", items = moduleD1_items, plot = FALSE))
-lm_moduleD_scores_poly <- lm(theta ~ poly(trueScore, degree=5, raw=TRUE), data = df_moduleD_TS)
-gD_coeffs <- unname(coef(lm_moduleD_scores_poly))
+s <- function(thetaEstimate, thetaRange) {
+  k <- 100
+  round((thetaEstimate - thetaRange[1]) / (thetaRange[2] - thetaRange[1]) * k)
+}
 
-df_moduleE_TS <- trueScoreSummary(plot(raschmodel, type = "ICC", items = moduleE1_items, plot = FALSE))
-lm_moduleE_scores_poly <- lm(theta ~ poly(trueScore, degree=5, raw=TRUE), data = df_moduleE_TS)
-gE_coeffs <- unname(coef(lm_moduleE_scores_poly))
+scaleScore <- s(thetaEstimate = -0.5, thetaRange = c(-4, 4))
 
-df_moduleF_TS <- trueScoreSummary(plot(raschmodel, type = "ICC", items = moduleF1_items, plot = FALSE))
-lm_moduleF_scores_poly <- lm(theta ~ poly(trueScore, degree=5, raw=TRUE), data = df_moduleF_TS)
-gF_coeffs <- unname(coef(lm_moduleF_scores_poly))
-
-df_moduleG_TS <- trueScoreSummary(plot(raschmodel, type = "ICC", items = moduleG1_items, plot = FALSE))
-lm_moduleG_scores_poly <- lm(theta ~ poly(trueScore, degree=5, raw=TRUE), data = df_moduleG_TS)
-gG_coeffs <- unname(coef(lm_moduleG_scores_poly))
-
-df_moduleH_TS <- trueScoreSummary(plot(raschmodel, type = "ICC", items = moduleH1_items, plot = FALSE))
-lm_moduleH_scores_poly <- lm(theta ~ poly(trueScore, degree=5, raw=TRUE), data = df_moduleH_TS)
-gH_coeffs <- unname(coef(lm_moduleH_scores_poly))
+(scaleScore)
 ```
 
-```{r Output g Functions}
-panel1_coeffs <- data.frame(t(gA_coeffs))
-panel1_coeffs <- rbind(panel1_coeffs, data.frame(t(gD_coeffs)))
-panel1_coeffs <- rbind(panel1_coeffs, data.frame(t(gE_coeffs)))
-panel1_coeffs <- rbind(panel1_coeffs, data.frame(t(gF_coeffs)))
-panel1_coeffs <- rbind(panel1_coeffs, data.frame(t(gG_coeffs)))
-panel1_coeffs <- rbind(panel1_coeffs, data.frame(t(gH_coeffs)))
-panel1_coeffs$moduleID <- c('A1', 'D1', 'E1', 'F1', 'G1', 'H1')
-panel1_coeffs <- panel1_coeffs[, c(7, 6, 5, 4, 3, 2, 1)]
+More complex scaling functions that use additional terms can also be used to tailor the reporting score range to the requirements of the test institute.
 
-# OUTPUT a CSV file too...
-write_csv(panel1_coeffs, "../data/scoring-functions-panel1.csv")
-```
-
-
+### Cut scores for routing
 
 We use the concept of the information function as a way of determining the best cut scores to use. Where a choice is needed to route onward to the next stage, we need to select a cut score to use. We could do this by simply selecting a mid-point in the true scale. For example, if the routing module A has 12 items, then we might assume that if a candidate scores 0-5 they route to the easy module in the next stage (module B), and if they score 6-12 they route to the harder module (module C). Ideally though we'd like to base this on the results of the Rasch analysis. Using the Item Information Function (IIF) gives us a way of selecting a cut score based on IRT. First lets explain the Item Informtation Function.
 
-### Item Information Functions (IIFs)
+#### Item Information Functions (IIFs)
 
 We mentioned earlier that the IIF provides a way of showing at what ability level an item is most discriminating. The IIF can be represented visually like this, using the `plot` function from the `ltm` package:
 
@@ -764,13 +736,11 @@ ggplot(itemPlot, aes(x=theta, y=information)) +
 
 For example this item shows a peak information for $\hat{\theta} =$ `r itemPlot$theta[which.max(itemPlot$information)]`. 
 
-### Module Information Functions (MIFs)
+#### Module Information Functions (MIFs)
 
 Just as with the ICC-MCC relationship, its possible to sum a set of IIFs into a Module Information Function (MIF).
 
-## Routing and Cut-Scores
-
-Routing between modules can then determined by cut scores derived from the intersection of information functions for the modules in the next stage. We should aim to place the cut score to be that at which the MIFs cross.
+Routing between modules can then determined by cut scores derived from the intersection of information functions for the modules in the next stage. We should aim to place the cut score to be that at which the MIFs intersect.
 
 Let's look at the MIFs for the two stage 2 modules:
 
@@ -797,50 +767,6 @@ ggplot(plotData, aes(x=theta, y=information)) +
   geom_vline(xintercept = cutTheta, linetype="dotted")
 ```
 Here we can see that there is point of intersection between modules B and C where $\hat\theta = $`r cutTheta`. If we read off the true score value that is equivalent for this theta estimate in Module A, then we can use this as the cut score. Below this value the candidate should be routed to Module B, above it they should be routed to Module C.
-
-We can then repeat the exercise for the stage 3 modules.
-
-```{r Stage 3 MIFs}
-plotData <- rbind(
-  informationCoefficients(plot(raschmodel, 
-                               type = "IIC", 
-                               items = moduleD1_items, plot = FALSE), 
-                          "D"),
-  informationCoefficients(plot(raschmodel, 
-                               type = "IIC", 
-                               items = moduleE1_items, plot = FALSE), 
-                          "E"),
-  informationCoefficients(plot(raschmodel, 
-                               type = "IIC", 
-                               items = moduleF1_items, plot = FALSE), 
-                          "F"))
-
-
-ggplot(plotData, aes(x=theta, y=information)) + 
-  geom_line(aes(colour=module)) +
-  labs(title="Module Information Function", x="θ", y="I(θ)")
-
-
-plotData <- rbind(
-  informationCoefficients(plot(raschmodel, 
-                               type = "IIC", 
-                               items = moduleE1_items, plot = FALSE), 
-                          "E"),
-  informationCoefficients(plot(raschmodel, 
-                               type = "IIC", 
-                               items = moduleF1_items, plot = FALSE), 
-                          "F"),
-  informationCoefficients(plot(raschmodel, 
-                               type = "IIC", 
-                               items = moduleG1_items, plot = FALSE), 
-                          "G"))
-
-
-ggplot(plotData, aes(x=theta, y=information)) + 
-  geom_line(aes(colour=module)) +
-  labs(title="Module Information Function", x="θ", y="I(θ)")
-```
-
 
 7. Summary
 
