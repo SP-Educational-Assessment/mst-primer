@@ -9,9 +9,11 @@ output:
   pdf_document:
     highlight: pygments
     latex_engine: lualatex
+  html_document:
+    df_print: paged
 version: 1
-description:
-  A practical guide to the design and development of computerised multistage tests.
+description: A practical guide to the design and development of computerised multistage
+  tests.
 bibliography: references.bib
 ---
 
@@ -522,6 +524,8 @@ ggplot(data = na.omit(df_displayDifficulties)) +
   labs(x = "items", y = "Difficulty (b)")
 ```
 
+You can see that some of the outlier items have a very large divergence from the mean; it is best to remove these items from the item bank as they have too large an error to be used in a live test.
+
 ### Banking the Updated Difficulty Parameters
 
 Once difficulty values have been calculated by fitting the Rasch model, the item bank should be updated to reflect this. The item difficulty ($b$ parameter) is a key component of the item, and should be stored along with the other information about the item. If a 2PL model is being used, then the discrimination ($a$ parameter) would also be stored.
@@ -584,9 +588,9 @@ ggplot(plotData, aes(x=theta, y=trueScore)) +
   geom_line(aes(colour=module)) +
   labs(title="Module Characteristic Curve", x="θ", y="True Score")
 ```
-You can read this off such that a candidate who scores 9 in the module A section of the test would have an estimated ability score, ot $\hat{\theta}$ of approximately 2.
+You can read this off such that a candidate who scores 9 in module A would have an estimated ability score, or $\hat{\theta}$, of approximately 1.92.
 
-We can compare the MCCs for the stage 2 modules:
+We can go on to compare the MCCs for the stage 2 modules:
 
 ```{r Stage 2 MCCs}
 moduleB1_items <- which(colnames(dfTrial) %in% colnames(dfModuleBItems))
@@ -600,7 +604,7 @@ ggplot(plotData, aes(x=theta, y=trueScore)) +
   geom_line(aes(colour=module)) +
   labs(title="Module Characteristic Curve", x="θ", y="True Score")
 ```
-A problem we can see already here is that these curves look too straight - ideally there should be a nice sigmoid shape to them. These MCCs have a low information content - in other words they are not very discriminating. We may want to move some items to provide a b etter shape to this curve.
+A problem we can see already here is that these curves look too straight - ideally there should be a nice sigmoid shape to them. These MCCs have a low information content - in other words they are not very discriminating. We may want to move some items between modules, or reject items that have poor discrimination.
 
 And for the modules in stage 3:
 
@@ -666,25 +670,26 @@ gA1 <- function(x) {
 }
 ```
 
-So, a candidate who scores 13 out of 20 on module A would have a $\hat\theta$ = `r gA1(13)`.
+So, a candidate who scores 9 out of 12 on module A would have a $\hat\theta$ = `r gA1(9)`.
 
 #### Validating the Mapping Function
 
 We can now use this function to overlay the original MCC:
 
 ```{r}
-moduleA_TSRange <- data.frame(
-  trueScore = c(seq(0,20)),
-  theta = c(rep(0, 21))
+df_gA <- data.frame(
+  trueScore = c(seq(0,12)),
+  theta = c(rep(0, 13))
 )
+df_gA$theta <- gA1(df_gA$trueScore)
 
-# plot the theta/true score curve from the Rasch model
-plot(x=df_moduleA_TS$theta, y=df_moduleA_TS$trueScore, 
-     type="l", col = "coral1", main="Module A", xlab="θ", ylab="True Score")
-moduleA_TSRange$theta <- gA1(moduleA_TSRange$trueScore)
-points(x=moduleA_TSRange$theta, y=moduleA_TSRange$trueScore, col="purple", pch=4)
-legend(2, 9, legend=c("MCC", "gA()"),
-  col=c("coral1", "purple"), lty=1:2, cex=0.8)
+# plot the theta/true score curve
+ggplot(df_moduleA_TS, aes(x = theta, y = trueScore)) +
+  geom_line(color = "red", linetype="dashed") +
+  geom_point(data = df_gA, aes(x = theta, y = trueScore)) +
+  scale_x_continuous(name="θ", limits=c(-4, 4)) +
+  scale_y_continuous(name="True Score", limits=c(0, 12), 
+                     minor_breaks = NULL, n.breaks = 12)
 ```
 We can see that it is a good fit, both in the middle of the range, and importantly at the upper and lower bounds.
 
@@ -697,7 +702,7 @@ A scale score function can then be created to map the $\hat{\theta}$ to a score 
 The test administrators may want to create different scale score functions for each stage of the MST, although the simplest approach is to just have a single one. A straightforward scaling function to use is to simply normalise the ability estimate for a candidate to a range 0-1 and then apply a multiplier constant $k$:
 
 $$
-s(\hat{\theta}_i) = k\frac{\hat{\theta}_i - min(\theta)}{max(\theta) - min(\theta)}
+f(\hat{\theta}_i) = k\frac{\hat{\theta}_i - min(\theta)}{max(\theta) - min(\theta)}
 $$
 
 Usually the scale score would be rounded to a whole number. For example, in R the scaling function might look like this:
@@ -708,7 +713,7 @@ s <- function(thetaEstimate, thetaRange) {
   round((thetaEstimate - thetaRange[1]) / (thetaRange[2] - thetaRange[1]) * k)
 }
 
-scaleScore <- s(thetaEstimate = -0.5, thetaRange = c(-4, 4))
+scaleScore <- s(thetaEstimate = 0.95, thetaRange = c(-4, 4))
 
 (scaleScore)
 ```
@@ -766,10 +771,10 @@ ggplot(plotData, aes(x=theta, y=information)) +
   labs(title="Module Information Function", x="θ", y="I(θ)") +
   geom_vline(xintercept = cutTheta, linetype="dotted")
 ```
-Here we can see that there is point of intersection between modules B and C where $\hat\theta = $`r cutTheta`. If we read off the true score value that is equivalent for this theta estimate in Module A, then we can use this as the cut score. Below this value the candidate should be routed to Module B, above it they should be routed to Module C.
+Here we can see that there is point of intersection between modules B and C where $\hat\theta = $ `r cutTheta`. If we read off the true score value that is equivalent for this theta estimate in Module A, then we can use this as the cut score. Below this value the candidate should be routed to Module B, above it they should be routed to Module C.
 
 7. Summary
 
-8. Bibliography
+8. References
 
 
