@@ -794,8 +794,12 @@ cutScore <- round(df_moduleA_TS$trueScore[which.min(abs(df_moduleA_TS$theta - cu
 ```
 Here we can see that there is point of intersection between modules B and C where the ability estimate is `r cutTheta`. If we read off the true score value that is equivalent for this theta estimate in Module A, then we can use this as the cut score; in this case the (rounded) true score is `r cutScore`. Below this value the candidate should be routed to Module B, above it they should be routed to Module C.
 
-7. Summary
+# Summary
 
-8. References
+We've seen how to take a test from the design stage to validation of the items, Rasch analysis, banking of difficulties, functions for calculation of ability estimates and scale scores, and finally calculation of the cut scores that will be used for routing.
+
+Once this information has been calculated and provided to the test administrators so that they can build it in to the test delivery system the test is theoretically ready for delivery. It is usual at this stage to run a further pilot to iron out any operational issues.
+
+# References
 
 
