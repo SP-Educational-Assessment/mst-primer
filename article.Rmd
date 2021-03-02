@@ -572,7 +572,7 @@ itemPlot <- data.frame(plot(raschmodel, type = "ICC", items = itemNo, plot = FAL
 colnames(itemPlot) <- c('theta', 'probability')
 ggplot(itemPlot, aes(x=theta, y=probability)) + 
   geom_line() +
-  labs(title="Item Characteristic Curve", x="θ", y="P(X=1)")
+  labs(title="Item Characteristic Curve", x="theta", y="P(X=1)")
 ```
 In this example we see the item characteristic curve (ICC) for `r itemID` with difficulty $b$ = `r itemDifficulty`.
 
@@ -611,7 +611,7 @@ plotData <- trueScoreSummary(plot(raschmodel,
                              "A")
 ggplot(plotData, aes(x=theta, y=trueScore)) + 
   geom_line(aes(colour=module)) +
-  labs(title="Module Characteristic Curve", x="θ", y="True Score")
+  labs(title="Module Characteristic Curve", x="theta", y="True Score")
 ```
 You can read this off such that a candidate who scores 9 in module A would have an estimated ability score, or $\hat{\theta}$, of approximately 1.92.
 
@@ -627,7 +627,7 @@ plotData <- rbind(
 
 ggplot(plotData, aes(x=theta, y=trueScore)) + 
   geom_line(aes(colour=module)) +
-  labs(title="Module Characteristic Curve", x="θ", y="True Score")
+  labs(title="Module Characteristic Curve", x="theta", y="True Score")
 ```
 A problem we can see already here is that these curves look too straight - ideally there should be a nice sigmoid shape to them. These MCCs have a low information content - in other words they are not very discriminating. We may want to move some items between modules, or reject items that have poor discrimination.
 
@@ -647,7 +647,7 @@ plotData <- rbind(
 
 ggplot(plotData, aes(x=theta, y=trueScore)) + 
   geom_line(aes(colour=module)) +
-  labs(title="Module Characteristic Curve", x="θ", y="True Score")
+  labs(title="Module Characteristic Curve", x="theta", y="True Score")
 ```
 This is already showing us something a little weird. Our D (very easy) module is actually a little bit more difficult than our F (moderately hard) module at the top end of the scale. And the E (moderately easy) module is more difficult than the G (very hard) module. All of the modules are quite similar in terms of difficulty (the MCCs are quite close to each other), and moreover the lines are quite flat - there is little discrimination between them. We'll see how this can be expressed more obviously in the next section.
 
@@ -712,7 +712,7 @@ df_gA$theta <- gA(df_gA$trueScore)
 ggplot(df_moduleA_TS, aes(x = theta, y = trueScore)) +
   geom_line(color = "red", linetype="dashed") +
   geom_point(data = df_gA, aes(x = theta, y = trueScore)) +
-  scale_x_continuous(name="θ", limits=c(-4, 4)) +
+  scale_x_continuous(name="theta", limits=c(-4, 4)) +
   scale_y_continuous(name="True Score", limits=c(0, 12), 
                      minor_breaks = NULL, n.breaks = 12)
 ```
@@ -761,7 +761,7 @@ itemPlot <- data.frame(plot(raschmodel, type = "IIC", items = itemNo, plot = FAL
 colnames(itemPlot) <- c('theta', 'information')
 ggplot(itemPlot, aes(x=theta, y=information)) + 
   geom_line() +
-  labs(title="Item Information Function", x="θ", y="I(θ)")
+  labs(title="Item Information Function", x="theta", y="I(theta)")
 ```
 
 For example this item shows a peak information for $\hat{\theta} =$ `r itemPlot$theta[which.max(itemPlot$information)]`. 
@@ -793,7 +793,7 @@ cutTheta <- stage2IIFs$theta
 
 ggplot(plotData, aes(x=theta, y=information)) + 
   geom_line(aes(colour=module)) +
-  labs(title="Module Information Function", x="θ", y="I(θ)") +
+  labs(title="Module Information Function", x="theta", y="I(theta)") +
   geom_vline(xintercept = cutTheta, linetype="dotted")
 
 cutScore <- round(df_moduleA_TS$trueScore[which.min(abs(df_moduleA_TS$theta - cutTheta))])
