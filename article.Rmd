@@ -50,6 +50,12 @@ Developing a new test is a complex, multi-disciplinary task, involving specialis
 
 Once the live test has been deployed, continual monitoring and adjustment of the test will be essential to ensure that it remains secure and delivers on the targetted goals over the long term.
 
+## Constraints and Assumptions
+
+This article focuses on practical solutions to problems that may be encountered during a test design. Lack of sufficient data, particularly in the early stages of design, is a perennial problem. The ability to validate the design at an early stage with simulated data is therefore important and will be covered here.
+
+In addition the test delivery system may be restricted in its ability to access the item bank to derive item difficulties. In this case, mapping functions to derive ability estimates and scale scores as well as provision of the cut scores for module routing must be provided in advance of test administration for each panel. We demonstrate methods that can be used to provide these values.
+
 ## Introduction to Item Response Theory
 
 When you deliver a test to a set of candidates, how can you be sure that you are measuring those candidates in the same way, even though the test administrated to one candidate has different items from that administered to another candidate?
