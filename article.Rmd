@@ -610,7 +610,7 @@ plotData <- trueScoreSummary(plot(raschmodel,
                                   items = moduleA1_items, plot = FALSE), 
                              "A")
 ggplot(plotData, aes(x=theta, y=trueScore)) + 
-  geom_line(aes(colour=module)) +
+  geom_line() +
   labs(title="Module Characteristic Curve", x="theta", y="True Score")
 ```
 You can read this off such that a candidate who scores 9 in module A would have an estimated ability score, or $\hat{\theta}$, of approximately 1.92.
@@ -799,6 +799,8 @@ ggplot(plotData, aes(x=theta, y=information)) +
 cutScore <- round(df_moduleA_TS$trueScore[which.min(abs(df_moduleA_TS$theta - cutTheta))])
 ```
 Here we can see that there is point of intersection between modules B and C where the ability estimate is `r cutTheta`. If we read off the true score value that is equivalent for this theta estimate in Module A, then we can use this as the cut score; in this case the (rounded) true score is `r cutScore`. Below this value the candidate should be routed to Module B, above it they should be routed to Module C.
+
+![Cut Score](images/cut-score.png)
 
 # Summary
 
