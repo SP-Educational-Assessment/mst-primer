@@ -28,6 +28,7 @@ bibliography: references.bib
 ```{r setup, include=FALSE}
 library(knitr)
 library(tidyverse)
+library(janitor)
 
 library(mstR)
 library(ltm)
@@ -324,54 +325,52 @@ plot(dfMSTResponse)
 
 We can run repeated simulations varying the topology of the test (for example changing number of stages and modules). Or by changing the number of items per module, the mean difficulty levels, or some other aspect of the model. By calculating the differences between estimated and true ability levels we can see which set of test features is optimal.
 
-In this example we'll change the number of items per module; keeping the total number of items administered constant, but changing the relative number of items as follows:
+In this example we'll change the mean difficulties of the modules as well as the number of items per module; keeping the total number of items administered constant, but changing the relative number of items as follows:
 
-| Design | Stage 1 | Stage 2 | Stage 3 | Total |
-| ------ | ------: | ------: | ------: | ----: |
-| 1      | 12      | 8       | 10      | 30    |
-| 2      | 12      | 10      | 8       | 30    |
-| 3      | 10      | 12      | 8       | 30    |
-| 4      | 10      | 8       | 12      | 30    |
-| 5      | 8       | 10      | 12      | 30    |
-| 6      | 8       | 12      | 10      | 30    |
+```{r}
+designParams <- read_csv('mst-designs.csv', skip = 1) %>%
+  clean_names() %>%
+  dplyr::select(-design, -total)
 
-We define the `mstDesign()` function to generate the set of test designs we want to investigate. This function varies the number of items for each module by stage and can be repeatedly applied to the set of designs in the `stages` list. It effectively generates variants of the test design presented above in \@ref(module difficulties) for 3-stage designs.
+print(designParams)
+```
+
+We define the `mstDesign()` function to generate the set of test designs we want to investigate. This function varies the number of items for each module by stage and can be repeatedly applied to a set of designs which we load in from a CSV file. The `mstDesign()` function effectively generates variants of the test design presented above in \@ref(module difficulties) for 3-stage designs.
 
 ```{r MST designs}
-mstDesign <- function(stage, difficulties) {
-  matrixN <- stage[1] + (2 * stage[2]) + (4 * stage[3])
+mstDesign <- function(stage1, stage2, stage3,
+                      module_a, module_b, module_c, module_d, module_e, module_f, module_g) {
+  matrixN <- stage1 + (2 * stage2) + (4 * stage3)
   modules <- matrix(0, matrixN, 7)
-  moduleA <- stage[1]
-  moduleB <- moduleA+stage[2]
-  moduleC <- moduleB+stage[2]
-  moduleD <- moduleC+stage[3]
-  moduleE <- moduleD+stage[3]
-  moduleF <- moduleE+stage[3]
-  moduleG <- moduleF+stage[3]
-  
-  modules[1:moduleA, 1] <- 1
-  modules[moduleA+1:stage[2], 2] <- 1
-  modules[moduleB+1:stage[2], 3] <- 1
-  modules[moduleC+1:stage[3], 4] <- 1  
-  modules[moduleD+1:stage[3], 5] <- 1
-  modules[moduleE+1:stage[3], 6] <- 1
-  modules[moduleF+1:stage[3], 7] <- 1
-  
-  itembank <- rbind(genDichoMatrix(stage[1], model = "1PL", bPrior = c("norm", 0.0, 1)),
-                    genDichoMatrix(stage[2], model = "1PL", bPrior = c("norm", -2.0, 1)),
-                    genDichoMatrix(stage[2], model = "1PL", bPrior = c("norm", 2.0, 1)),
-                    genDichoMatrix(stage[3], model = "1PL", bPrior = c("norm", -3.0, 1)),
-                    genDichoMatrix(stage[3], model = "1PL", bPrior = c("norm", -1.0, 1)),
-                    genDichoMatrix(stage[3], model = "1PL", bPrior = c("norm", 1.0, 1)),
-                    genDichoMatrix(stage[3], model = "1PL", bPrior = c("norm", 3.0, 1)))
+  moduleA_items <- stage1
+  moduleB_items <- moduleA_items + stage2
+  moduleC_items <- moduleB_items + stage2
+  moduleD_items <- moduleC_items + stage3
+  moduleE_items <- moduleD_items + stage3
+  moduleF_items <- moduleE_items + stage3
+  moduleG_items <- moduleF_items + stage3
+
+  modules[1:moduleA_items, 1] <- 1
+  modules[moduleA_items+1:stage2, 2] <- 1
+  modules[moduleB_items+1:stage2, 3] <- 1
+  modules[moduleC_items+1:stage3, 4] <- 1
+  modules[moduleD_items+1:stage3, 5] <- 1
+  modules[moduleE_items+1:stage3, 6] <- 1
+  modules[moduleF_items+1:stage3, 7] <- 1
+
+  itembank <- rbind(genDichoMatrix(stage1, model = "1PL", bPrior = c("norm", module_a, 1)),
+                    genDichoMatrix(stage2, model = "1PL", bPrior = c("norm", module_b, 1)),
+                    genDichoMatrix(stage2, model = "1PL", bPrior = c("norm", module_c, 1)),
+                    genDichoMatrix(stage3, model = "1PL", bPrior = c("norm", module_d, 1)),
+                    genDichoMatrix(stage3, model = "1PL", bPrior = c("norm", module_e, 1)),
+                    genDichoMatrix(stage3, model = "1PL", bPrior = c("norm", module_f, 1)),
+                    genDichoMatrix(stage3, model = "1PL", bPrior = c("norm", module_g, 1)))
   itembank <- as.matrix(itembank)
 
   return(list("modules" = modules, "itemBank" = itembank))
 }
 
-stages <- list(c(12,8,10), c(12,10,8), c(10,12,8),
-               c(10,8,12), c(8,10,12), c(8,12,10))
-testDesigns <- lapply(stages, mstDesign)
+testDesigns <- pmap(designParams, mstDesign)
 ```
 
 To run the simulations we'll create a set of simulated candidates with ability range -4 to 4 (stepped in increments of 0.5). Then we'll repeat for each of the six designs above, with the same item bank.
