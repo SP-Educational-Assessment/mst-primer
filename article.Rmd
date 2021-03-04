@@ -246,7 +246,8 @@ Selecting items into the modules is done by creating another matrix with 68 rows
 ```{r module items, echo=TRUE}
 # create a function to map module names to indices
 moduleIndices <- seq(1:7)
-names(moduleIndices) <- c("A", "B", "C", "D", "E", "F", "G")
+moduleNames <- c('A', 'B', 'C', 'D', 'E', 'F', 'G')
+names(moduleIndices) <- moduleNames
 module <- function(n) { unname(moduleIndices[n]) }
 
 modules <- matrix(0, 68, 7)
@@ -334,7 +335,7 @@ In this example we'll change the number of items per module; keeping the total n
 | 5      | 8       | 10      | 12      | 30    |
 | 6      | 8       | 12      | 10      | 30    |
 
-We define the `mstDesign()` function to generate the set of test designs we want to investigate. This function varies the number of items for each module by stage and can be repeatedly applied to the set of designs in the `stages` list. It effectively generates variants of the test design presented above in \@ref(module difficulties).
+We define the `mstDesign()` function to generate the set of test designs we want to investigate. This function varies the number of items for each module by stage and can be repeatedly applied to the set of designs in the `stages` list. It effectively generates variants of the test design presented above in \@ref(module difficulties) for 3-stage designs.
 
 ```{r MST designs}
 mstDesign <- function(stage, difficulties) {
@@ -357,12 +358,12 @@ mstDesign <- function(stage, difficulties) {
   modules[moduleF+1:stage[3], 7] <- 1
   
   itembank <- rbind(genDichoMatrix(stage[1], model = "1PL", bPrior = c("norm", 0.0, 1)),
-                    genDichoMatrix(stage[2], model = "1PL", bPrior = c("norm", -1.0, 1)),
-                    genDichoMatrix(stage[2], model = "1PL", bPrior = c("norm", 1.0, 1)),
-                    genDichoMatrix(stage[3], model = "1PL", bPrior = c("norm", -1.5, 1)),
-                    genDichoMatrix(stage[3], model = "1PL", bPrior = c("norm", -0.5, 1)),
-                    genDichoMatrix(stage[3], model = "1PL", bPrior = c("norm", 0.5, 1)),
-                    genDichoMatrix(stage[3], model = "1PL", bPrior = c("norm", 1.5, 1)))
+                    genDichoMatrix(stage[2], model = "1PL", bPrior = c("norm", -2.0, 1)),
+                    genDichoMatrix(stage[2], model = "1PL", bPrior = c("norm", 2.0, 1)),
+                    genDichoMatrix(stage[3], model = "1PL", bPrior = c("norm", -3.0, 1)),
+                    genDichoMatrix(stage[3], model = "1PL", bPrior = c("norm", -1.0, 1)),
+                    genDichoMatrix(stage[3], model = "1PL", bPrior = c("norm", 1.0, 1)),
+                    genDichoMatrix(stage[3], model = "1PL", bPrior = c("norm", 3.0, 1)))
   itembank <- as.matrix(itembank)
 
   return(list("modules" = modules, "itemBank" = itembank))
@@ -522,7 +523,6 @@ alphasModuleG <- ltm::cronbach.alpha(dfModuleGItems, standardized = TRUE, na.rm 
 # we'll want to focus on modules that show a low alpha and a small number of samples
 # as we may want to get more trial data for these, or look at the items to make
 # sure they are testing the right skill (or both)
-module <- c('A', 'B', 'C', 'D', 'E', 'F', 'G')
 stage <- c(1, 2, 2, 3, 3, 3, 3)
 alpha <- c(alphasModuleA$alpha, alphasModuleB$alpha, alphasModuleC$alpha,
             alphasModuleD$alpha, alphasModuleE$alpha, alphasModuleF$alpha,
@@ -534,11 +534,12 @@ num_responses <- c(alphasModuleA$n, alphasModuleB$n, alphasModuleC$n,
             alphasModuleD$n, alphasModuleE$n, alphasModuleF$n,
             alphasModuleG$n)
 
-dfCronbachsAlpha <- data.frame(module, stage, num_items, num_responses, alpha)
+dfCronbachsAlpha <- data.frame(moduleNames, stage, num_items, num_responses, alpha)
 
 (dfCronbachsAlpha)
 
-ggplot(dfCronbachsAlpha, aes(x=alpha, y=num_responses, size = num_items, color = module)) +
+ggplot(dfCronbachsAlpha, 
+       aes(x=alpha, y=num_responses, size = num_items, color = moduleNames)) +
     geom_point() +
     scale_x_continuous(limits = c(0, 1)) +
     theme(legend.position = "right") +
