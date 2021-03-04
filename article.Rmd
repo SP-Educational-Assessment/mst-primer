@@ -678,7 +678,7 @@ ggplot(plotData, aes(x=theta, y=trueScore)) +
   geom_line(aes(colour=module)) +
   labs(title="Module Characteristic Curve", x="theta", y="True Score")
 ```
-This is already showing us something a little weird. Our D (very easy) module is actually a little bit more difficult than our F (moderately hard) module at the top end of the scale. And the E (moderately easy) module is more difficult than the G (very hard) module. All of the modules are quite similar in terms of difficulty (the MCCs are quite close to each other), and moreover the lines are quite flat - there is little discrimination between them. We'll see how this can be expressed more obviously in the next section.
+This is already showing us something a little weird. Our E (easy) module is actually a little bit more difficult than our F (hard) module. All of the modules are quite similar in terms of difficulty (the MCCs are quite close to each other), and moreover the lines are quite flat - there is little discrimination between them.
 
 ## Cut scores and scale scores
 
@@ -827,9 +827,7 @@ ggplot(plotData, aes(x=theta, y=information)) +
 
 cutScore <- round(df_moduleA_TS$trueScore[which.min(abs(df_moduleA_TS$theta - cutTheta))])
 ```
-Here we can see that there is point of intersection between modules B and C where the ability estimate is `r cutTheta`. If we read off the true score value that is equivalent for this theta estimate in Module A, then we can use this as the cut score; in this case the (rounded) true score is `r cutScore`. Below this value the candidate should be routed to Module B, above it they should be routed to Module C.
-
-![Cut Score](images/cut-score.png)
+Here we can see that there is point of intersection between modules B and C where the ability estimate is `r cutTheta`. If we read off the true score value that is equivalent for this theta estimate in Module A, then we can use this as the cut score; in this case the (rounded) true score is `r cutScore`.
 
 # Summary
 
