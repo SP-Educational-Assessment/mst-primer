@@ -11,7 +11,7 @@ version: 1
 output:
   pdf_document: 
     highlight: tango
-    latex_engine: xelatex
+    latex_engine: lualatex
     toc: yes
     toc_depth: 2
     fig_caption: yes
@@ -30,7 +30,7 @@ bibliography: references.bib
 ---
 
 ```{r setup, include=FALSE}
-library(knitr)
+library(kableExtra)
 library(tidyverse)
 library(janitor)
 
@@ -322,7 +322,7 @@ For this simulated candidate with a true $\theta$ of `r dfMSTResponse$trueTheta`
 
 The Module Information Function is used to determine the 'best' (that is the most informative) module to route to in the next stage. In this case the modules that the candidate was routed to were `r names(moduleIndices[dfMSTResponse$selected.modules])`. A plot can be made as follows, showing the highlighted route through the multi-stage test. Note that the output from the `randomMST` function and the plot use the module and item indices (rather than their labels), so you may want to map these back to a name for ease of interpretation.
 
-```{r show simulated test, echo=FALSE, fig.cap="Example module routing"}
+```{r show simulated test, echo=FALSE, fig.cap="Example routing", message=FALSE}
 plot(dfMSTResponse)
 ```
 
@@ -332,15 +332,19 @@ We can run repeated simulations varying the topology of the test, for example ch
 
 In this example we'll change the mean difficulties of the modules as well as the number of items per module; keeping the total number of items administered constant, but changing the relative number of items as follows:
 
-```{r test-design-params, echo=FALSE}
+```{r test-design-params, echo=FALSE, message=FALSE}
 designParams <- read_csv('mst-designs.csv', skip = 1) %>%
   clean_names() %>%
   dplyr::select(-total)
 
-knitr::kable(
-  designParams, booktabs = TRUE,
-  caption = 'MST Design paramaters (modules sizes and mean difficulties).'
-)
+displayParams <- designParams %>%
+  rename(Design=design, `1`=stage1, `2`=stage2, `3`=stage3,
+         A=module_a, B=module_b, C=module_c,
+         D=module_d, E=module_e, F=module_f, G=module_g)
+
+kbl(displayParams, caption = 'MST design paramaters')  %>%
+  kable_styling() %>%
+  add_header_above(c(" ", "Stage" = 3, "Module" = 7))
 ```
 
 We define the `mstDesign()` function to generate the set of test designs we want to investigate. This function varies the number of items for each module by stage and can be repeatedly applied to a set of designs which we load in from a CSV file. The `mstDesign()` function effectively generates multiple variants of the test design.
@@ -381,7 +385,7 @@ mstDesign <- function(design, stage1, stage2, stage3,
 testDesigns <- pmap(designParams, mstDesign)
 ```
 
-To run the simulations we'll create a set of simulated candidates with an ability range between -4 and 4 (stepped in increments of 0.5). Then we'll repeat for each of the six designs above, with the same item bank.
+To run the simulations we'll create a set of simulated candidates with an ability range between -4 and 4 (stepped in increments of 0.5). Then we'll repeat for each of the six designs above, using the same item bank.
 
 ```{r setup simulation}
 simulation.levels <- seq(-4, 4, 0.5)
@@ -466,10 +470,9 @@ After making final decisions about test design, test development can start in ea
 Once the parameters of the test design are well established, the test designers should have a good idea of the number of modules, items and relative difficulties required. Where possible the simplest design is preferred. In our case there is no one design that is clearly better than the others, so we'll go with our design 1:
 
 ```{r}
-knitr::kable(
-  head(designParams, n = 1), booktabs = TRUE,
-  caption = 'MST Design 1'
-)
+kbl(head(displayParams, n = 1), caption = 'MST Design 1') %>%
+  kable_styling() %>%
+  add_header_above(c(" ", "Stage" = 3, "Module" = 7))
 ```
 
 ### Item Writing
@@ -497,10 +500,8 @@ The trial data is usually received as CSV or Excel files that comprise a candida
 ```{r}
 dfTestResponses <- read_csv('trial-data.csv')
 
-knitr::kable(
-  head(dfTestResponses[1:8]), booktabs = TRUE,
-  caption = 'Example Test Reponses'
-)
+kbl(head(dfTestResponses[1:8]), caption = 'Example Test Reponses') %>%
+  kable_styling()
 ```
 
 The `ltm` library can be used to fit a number of dichotomous and polytomous IRT models. It's the fastest R library that we've used for fitting a Rasch model. Before doing that we get some summary statistics from the data, including the Cronbach's alpha measure of covariance. 
@@ -559,10 +560,8 @@ num_responses <- c(alphasModuleA$n, alphasModuleB$n, alphasModuleC$n,
 
 dfCronbachsAlpha <- data.frame(moduleNames, stage, num_items, num_responses, alpha)
 
-knitr::kable(
-  head(dfCronbachsAlpha), booktabs = TRUE,
-  caption = "Cronbach's Alpha"
-)
+kbl(dfCronbachsAlpha, caption = "Cronbach's Alpha") %>%
+  kable_styling()
 
 ggplot(dfCronbachsAlpha, 
        aes(x=alpha, y=num_responses, size = num_items, color = moduleNames)) +
@@ -572,6 +571,7 @@ ggplot(dfCronbachsAlpha,
     labs(x = "alpha", y = "# responses") +
     geom_vline(xintercept = 0.7, linetype="dotted")
 ```
+
 Ideally, we're looking for alphas of 0.7 and above; less than this indicates that there is weak covariance between the items in the module, which means they may not be testing the same trait. This measure is really only useful as a guide for further investigations; the ultimate decision on whether to modify the items in each module should be taken in collaboration with the subject matter experts.
 
 ### Rasch Model
@@ -605,7 +605,7 @@ ggplot(data = na.omit(df_displayDifficulties)) +
   labs(x = "items", y = "Difficulty (b)")
 ```
 
-This chart makes it easy to spot any outlier items have a very large divergence from the mean; it is best to remove these items from the item bank as they have too large an error to be used in a live test. Usually this is the result of them having all 1's or 0's (in other words they are too easy or too difficult for all candidates who took them).
+This chart makes it easy to spot any outlier items that have a very large divergence from the mean; it is best to remove these items from the item bank as they have too large an error (or rather too little information) to be used in a live test. Usually this is the result of them having all 1's or 0's (in other words they are too easy or too difficult for all candidates who took them).
 
 ### Banking the Updated Difficulty Parameters
 
@@ -668,7 +668,7 @@ plotData <- trueScoreSummary(plot(raschmodel,
                              "A")
 ggplot(plotData, aes(x=theta, y=trueScore)) + 
   geom_line() +
-  labs(title="Module Characteristic Curve", x="theta", y="True Score")
+  labs(title="Module Characteristic Curve (Stage 1)", x="theta", y="True Score")
 ```
 
 We can go on to compare the MCCs for the stage 2 modules:
@@ -683,7 +683,7 @@ plotData <- rbind(
 
 ggplot(plotData, aes(x=theta, y=trueScore)) + 
   geom_line(aes(colour=module)) +
-  labs(title="Module Characteristic Curve", x="theta", y="True Score")
+  labs(title="Module Characteristic Curves (Stage 2)", x="theta", y="True Score")
 ```
 
 Looking at Figure 14, a problem we can already see is that these curves look very straight - ideally there should be a nice sigmoid shape to them. These MCCs have a low information content - in other words they are not very discriminating. We may want to move some items between modules, or reject items that have poor discrimination, or even go back to the drawing board and add some more quality items.
@@ -704,7 +704,7 @@ plotData <- rbind(
 
 ggplot(plotData, aes(x=theta, y=trueScore)) + 
   geom_line(aes(colour=module)) +
-  labs(title="Module Characteristic Curve", x="theta", y="True Score")
+  labs(title="Module Characteristic Curves (Stage 3)", x="theta", y="True Score")
 ```
 
 All of the modules are quite similar in terms of difficulty (the MCCs are quite close to each other), and moreover the lines are quite flat - there is little discrimination between them. So we may want to look at moving some items between modules, or rejecting items with poor discrimination,
