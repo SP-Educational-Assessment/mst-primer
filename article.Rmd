@@ -115,7 +115,7 @@ The slope of the curve indicates how discriminating the item is. An item that is
 
 ### Item Discrimination and the Item Information Function
 
-An item that all candidates always get right because it is too easy, or they always get wrong because it's too hard has very little informational value for a test. It's telling you very little about the ability levels of your candidates. From this it follows that an item where half the candidates answer correct and the other half answer wrong has the most informational value; this is the point where $\theta$ and $b$ are equal, so the item is perfectly targeted at the ability of these candidates. This relationship can be expressed by the Item Information Function (IIF). In the 1PL model the maximum value of the IIF is 0.25 (it can be different in the other models due to the influence of the discrimination parameter $a$).  Figure 2 displays the IIFs for the same three items as before.
+An item that all candidates always get right because it is too easy has very little informational value for test purposes. The same is true of test items that all candidates always get wrong because they are too hard. It's telling you very little about the ability levels of your candidates. From this it follows that an item where half the candidates answer correct and the other half answer wrong has the most informational value; this is the point where $\theta$ and $b$ are equal, so the item is perfectly targeted at the ability of these candidates. This relationship can be expressed by the Item Information Function (IIF). In the 1PL model the maximum value of the IIF is 0.25 (it can be different in the other models due to the influence of the discrimination parameter $a$).  Figure 2 displays the IIFs for the same three items as before.
 
 ![Item Information Functions](images/iif.png)
 
@@ -126,16 +126,16 @@ I_i(\theta, b_i) = P_i(\theta, b_i)Q_i(\theta, b_i)
 $$
 Where P is the probability of getting the item correct (for a given ability), and Q is the probability of getting it wrong.
 
-As mentioned, greater information implies a smaller error of measurement. When designing a test it is important to deliver items with a range of difficulties that match the expected ability ranges of the candidates so that you can accurately measure the your target candidates. In the above diagram you can see that Item 587 (blue) is good at measuring candidates around ability level 0.95. Item (green) 583 is better at measuring candidates with a lower ability level.
+As mentioned, greater information implies a smaller error of measurement. When designing a test it is important to deliver items with a range of difficulties that match the expected ability ranges of the candidates so that you can accurately measure the your target candidates. In the above diagram you can see that Item 587 (blue) is good at measuring candidates around ability level 0.95. Item 583 (green) is better at measuring candidates with a lower ability level.
 
 ### Logits
 
-The log odds, or *logit* of a correct response can be expressed (in the Rasch model) as $\theta - b$; so if a candidate has ability $\theta$ which happens to be equal to the difficulty of our item $b_{583}$, then the odds are even (1:1) that they will answer it correctly (in other words a 50% chance of getting it right, and a 50% chance of getting it wrong). The logit value here would be 0 (remember this is also the point of maximum information for the item). The logit function is the inverse of the logistic function described earlier:
+The log odds, or *logit* of a correct response can be expressed (in the Rasch model) as $\theta - b$; so if a candidate has a latent ability level ($\theta$) which happens to be equal to the difficulty of our item $b_{583}$, then the odds are even (1:1) that they will answer it correctly (in other words a 50% chance of getting it right, and a 50% chance of getting it wrong). The logit value here would be 0 (this is also the point of maximum information for the item). The logit function is the inverse of the logistic function described earlier:
 
 $$
 logit(p) = log(\frac{p}{1-p})
 $$
-Where $p$ is a probability.
+Where $p$ is the probability of getting a correct response.
 
 ### Test Item Lifecycle
 
@@ -143,7 +143,7 @@ The item response function is a logistic function with a characteristic sigmoid 
 
 Of course, this item is just one of many that will, over time, be added into an item bank. The item will have a number of properties and metadata that describes it. For example the name of the item writer who created it, the skill it is targeting, the sub-skills required, a set of media (audio, video or image files) that is associated with it and which serve as stimuli, the instructions, the prompt question, and importantly for our purposes, the difficulty coefficient $b$. The rest of this article follows this life cycle, in particular how it relates to the various IRT methodologies for design and validation of multistage tests.
 
-# Blueprint and test specification
+## Blueprint and test specification
 
 When designing any test, it is important to ensure that items are written to the target ability range that you want to measure. Subject Matter Experts (SMEs) will need to be involved in the initial test design to make decisions about the length of the test and the components (skills as R,L,S,W, or any combination of these) for the target candidature.
 
@@ -227,7 +227,7 @@ Average difficulty levels for each module are shown in Figure 5 below (where $\b
 
 #### The Simulated Item Bank
 
-Here we create a set of items `it.MST` using difficulties from a normal distribution:
+Here we create in R a set of items `it.MST` that will be used in the analysis with `mstR`. We'll be using randomly generated item difficulties drawn from a normal distribution:
 
 ```{r module difficulties, echo=TRUE}
 it.MST <- rbind(genDichoMatrix(12, model = "1PL", bPrior = c("norm", 0.0, 1)),
@@ -245,7 +245,7 @@ We'll end up with a matrix of 68 items, each with randomised difficulty paramete
 
 #### Assigning Items to Modules
 
-Selecting items into the modules is done by creating another matrix with 68 rows (items) and 7 columns (modules); a cell containing a 1 indicates membership of an item in a module. Because we're using an R matrix to store this information we must use the index of the module (module A == 1, module B == 2, and so on); the code snippet below uses a helper function called `module()` to map from names to indices.
+Selecting items into the modules is done by creating another matrix with 68 rows (items) and 7 columns (modules); a cell containing a 1 indicates membership of an item in a module. Because we're using an R matrix to store this information we must use the index of the module (module A = 1, module B = 2, and so on); the code snippet below uses a helper function called `module()` to map from names to indices.
 
 ```{r module items, echo=TRUE}
 # create a function to map module names to indices
@@ -316,7 +316,7 @@ dfMSTResponse <- randomMST(trueTheta = theta,
 (dfMSTResponse)
 ```
 
-For this simulated candidate with a true $\theta$ = `r dfMSTResponse$trueTheta`, the estimated ability $\hat{\theta}$ = `r dfMSTResponse$thFinal`. 
+For this simulated candidate with a true $\theta$ of `r dfMSTResponse$trueTheta`, the MST has delivered an estimated ability $\hat{\theta}$ of `r dfMSTResponse$thFinal`. 
 
 The Module Information Function is used to determine the 'best' (that is the most informative) module to route to in the next stage. In this case the modules that the candidate was routed to were `r names(moduleIndices[dfMSTResponse$selected.modules])`. A plot can be made as follows, showing the highlighted route through the multi-stage test. Note that the output from the `randomMST` function and the plot use the module and item indices (rather than their labels), so you may want to map these back to a name for ease of interpretation.
 
@@ -330,7 +330,7 @@ We can run repeated simulations varying the topology of the test, for example ch
 
 In this example we'll change the mean difficulties of the modules as well as the number of items per module; keeping the total number of items administered constant, but changing the relative number of items as follows:
 
-```{r test-design-params}
+```{r test-design-params, echo=FALSE}
 designParams <- read_csv('mst-designs.csv', skip = 1) %>%
   clean_names() %>%
   dplyr::select(-design, -total)
@@ -341,7 +341,7 @@ knitr::kable(
 )
 ```
 
-We define the `mstDesign()` function to generate the set of test designs we want to investigate. This function varies the number of items for each module by stage and can be repeatedly applied to a set of designs which we load in from a CSV file. The `mstDesign()` function effectively generates variants of the test design presented above in \@ref(module difficulties) for 3-stage designs.
+We define the `mstDesign()` function to generate the set of test designs we want to investigate. This function varies the number of items for each module by stage and can be repeatedly applied to a set of designs which we load in from a CSV file. The `mstDesign()` function effectively generates multiple variants of the test design.
 
 ```{r MST designs}
 mstDesign <- function(stage1, stage2, stage3,
@@ -448,6 +448,7 @@ ggplot(data = dfRMSE, aes(x = theta)) +
   geom_line(aes(y = X6)) +
   labs(x = "theta", y = "RMSE")
 ```
+
 Both these graphs show that there is no variation between the different designs - they all show a similar pattern, with overestimation for higher ability levels.
 
 For more details on how to run simulations like this see Chapter 7 of [@magis2017computerized], or check out the [mstR](https://cran.r-project.org/web/packages/mstR/index.html) package.
@@ -616,6 +617,7 @@ ggplot(itemPlot, aes(x=theta, y=probability)) +
   geom_line() +
   labs(title="Item Characteristic Curve", x="theta", y="P(X=1)")
 ```
+
 In this example Figure 12 we see the item characteristic curve (ICC) for `r itemID` with difficulty $b$ = `r itemDifficulty`.
 
 ### Module Characteristic Curves (MCCs)
@@ -670,6 +672,7 @@ ggplot(plotData, aes(x=theta, y=trueScore)) +
   geom_line(aes(colour=module)) +
   labs(title="Module Characteristic Curve", x="theta", y="True Score")
 ```
+
 Looking at Figure 14, a problem we can already see is that these curves look very straight - ideally there should be a nice sigmoid shape to them. These MCCs have a low information content - in other words they are not very discriminating. We may want to move some items between modules, or reject items that have poor discrimination, or even go back to the drawing board and add some more quality items.
 
 And for the modules in stage 3:
@@ -690,6 +693,7 @@ ggplot(plotData, aes(x=theta, y=trueScore)) +
   geom_line(aes(colour=module)) +
   labs(title="Module Characteristic Curve", x="theta", y="True Score")
 ```
+
 Something that we see here that is odd is that our module E (easy) is actually a little bit more difficult than our module F (hard). Also all of the modules are quite similar in terms of difficulty (the MCCs are quite close to each other), and moreover the lines are quite flat - there is little discrimination between them. Again we may want to look at moving some items between modules, or rejecting items with poor discrimination,
 
 ## Cut scores and scale scores
@@ -761,6 +765,7 @@ ggplot(df_moduleA_TS, aes(x = theta, y = trueScore)) +
   scale_y_continuous(name="True Score", limits=c(0, 12), 
                      minor_breaks = NULL, n.breaks = 12)
 ```
+
 We can see that it is a good fit - the black dots that are dervied from applying $g_A()$ to each possible true score show very little error from the original MCC (red dotted line). This is true both in the middle of the range, and importantly at the upper and lower bounds.
 
 We then need to go through each module in every panel and create a true score mapping function for each. These functions, or the lookup-tables that they can be used to generate, will then need to be provided to the developers of the test delivery software so that they can be used to calculate theta estimates and scale scores for each module.
@@ -845,6 +850,7 @@ ggplot(plotData, aes(x=theta, y=information)) +
 
 cutScore <- round(df_moduleA_TS$trueScore[which.min(abs(df_moduleA_TS$theta - cutTheta))])
 ```
+
 Here in Figure 18 we can see that there is a point of intersection between Modules B and C where the ability estimate is `r cutTheta`. If we read off the true score value that is equivalent for this theta estimate in Module A, then we can use this as the cut score; in this case the (rounded) true score is `r cutScore`.
 
 # Summary
