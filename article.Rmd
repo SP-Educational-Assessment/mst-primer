@@ -19,9 +19,11 @@ output:
     df_print: paged
     toc: true
     toc_depth: 2
+    fig_caption: true
   word_document:
     toc: true
     toc_depth: 2
+    fig_caption: true
 bibliography: references.bib
 ---
 
@@ -41,12 +43,13 @@ options(scipen = 1, digits = 3)
 Computerised multistage tests (MSTs) have grown in popularity in recent years due to their advantages of flexibility and simplicity over linear and computerised adaptive tests (CATs). A growing body of academic literature is available for researchers, however the practicalities of using MST for the design and delivery of real-world tests is still difficult to access. I hope this article provides a useful practical guide to test design and delivery.
 
 This article is split into 3 main parts:
-1.	The design of MSTs
-2.	The development of MSTs
-3.	The validation of MSTs
-  a.	Test construction
-  b.	Trialling
-  c.	Scoring and routing 
+
+- The design of MSTs
+- The development of MSTs
+- The validation of MSTs
+  - Test construction
+  - Trialling
+  - Scoring and routing 
 
 In this article we’ll consider an example *item* which will follow a lifecycle from when it is first conceived, developed, rated and trialled, banked in the item bank, delivered as part of one or more test administrations, and finally retired from use. We will also consider a hypothetical *candidate* and follow their *journey* from being entered to take the test, being routed between the different stages of the test, and receiving a final score and report on their results.
 
@@ -104,7 +107,7 @@ $Pr(X_{ij} = 1)$ is the probability of a correct response, $\theta_i$ represents
 
 For every item, the probability that the item will be answered correctly can be visualised by plotting an Item Characteristic Curve (ICC), which uses the above logistic function. Figure 1 plots the ICCs for three items: Item579 (red), Item583 (green) and Item587 (blue).
 
-![Item Characteristic Curves \label{Figure 1}](images/icc.png)
+![Item Characteristic Curves](images/icc.png)
 
 There is an equivalence between $\theta$ and $b$. In this example a candidate with mean ability ($\theta = 0$) would be expected to get item 587 (blue) correct with a probability of 0.28. The same candidate would have a a probability of 0.83 of getting the less difficult item 583 (green) correct. The further to the right the sigmoid is the more difficult the item is, with item 868 (red) being the most difficult of the three.
 
@@ -323,16 +326,19 @@ plot(dfMSTResponse)
 
 ### Running Repeated Simulations
 
-We can run repeated simulations varying the topology of the test (for example changing number of stages and modules). Or by changing the number of items per module, the mean difficulty levels, or some other aspect of the model. By calculating the differences between estimated and true ability levels we can see which set of test features is optimal.
+We can run repeated simulations varying the topology of the test, for example changing number of stages and modules. Or by changing the number of items per module, the mean difficulty levels, or some other aspect of the model. By calculating the differences between estimated and true ability levels we can see which set of test features would be most optimal.
 
 In this example we'll change the mean difficulties of the modules as well as the number of items per module; keeping the total number of items administered constant, but changing the relative number of items as follows:
 
-```{r}
+```{r test-design-params}
 designParams <- read_csv('mst-designs.csv', skip = 1) %>%
   clean_names() %>%
   dplyr::select(-design, -total)
 
-print(designParams)
+knitr::kable(
+  designParams, booktabs = TRUE,
+  caption = 'MST Design paramaters (modules sizes and mean difficulties).'
+)
 ```
 
 We define the `mstDesign()` function to generate the set of test designs we want to investigate. This function varies the number of items for each module by stage and can be repeatedly applied to a set of designs which we load in from a CSV file. The `mstDesign()` function effectively generates variants of the test design presented above in \@ref(module difficulties) for 3-stage designs.
@@ -373,7 +379,7 @@ mstDesign <- function(stage1, stage2, stage3,
 testDesigns <- pmap(designParams, mstDesign)
 ```
 
-To run the simulations we'll create a set of simulated candidates with ability range -4 to 4 (stepped in increments of 0.5). Then we'll repeat for each of the six designs above, with the same item bank.
+To run the simulations we'll create a set of simulated candidates with an ability range between -4 and 4 (stepped in increments of 0.5). Then we'll repeat for each of the six designs above, with the same item bank.
 
 ```{r setup simulation}
 simulation.levels <- seq(-4, 4, 0.5)
@@ -444,9 +450,13 @@ ggplot(data = dfRMSE, aes(x = theta)) +
 ```
 Both these graphs show that there is no variation between the different designs - they all show a similar pattern, with overestimation for higher ability levels.
 
-For more details on how to run simulations like this see chapter 7 of [@magis2017computerized], or check out the [CRAN page](https://cran.r-project.org/web/packages/mstR/index.html) `mstR` package.
+For more details on how to run simulations like this see Chapter 7 of [@magis2017computerized], or check out the [mstR](https://cran.r-project.org/web/packages/mstR/index.html) package.
 
-## Trialling and Test Validation
+# The Validation of MSTs
+
+After making final decisions about test design, test development can start in earnest. In this part we describe what needs to be done before a MST can be finalized.
+
+## Test Construction
 
 Once the parameters of the test design are well established, the test designers should have a good idea of the number of modules, items and relative difficulties required. Where possible the simplest design is preferred. In our case there is no one design that is clearly better than the others, so we'll go with our design 1:
 
@@ -454,20 +464,23 @@ Once the parameters of the test design are well established, the test designers 
 | ------ | ------: | ------: | ------: | ----: |
 | 1      | 12      | 8       | 10      | 30    |
 
-### Item Writing and Intial Validation
+### Item Writing
 
 A process of item writing will then be undertaken. Subject matter experts (SMEs) will be brought in to help define the instructions for test writers. A set of items will then be created by the team of item writers. To take our test design example, we'll establish the number of items for each module that will be required at each CEFR level.
 
-In general, the test designers will want to ensure that each module contains a balance of items of varying difficulty within the target ability range for each module. The Common European Frame of Reference (CEFR) is used to assign items into different ability levels (A1-C2).
+In general, the test designers will want to ensure that each module contains a balance of items of varying difficulty within the target ability range for each module. The Common European Frame of Reference (CEFR) is used to assign items into different ability levels (A1-C2). In our example, the 12 items in Module A cover all levels of the CEFR, as in Figure 9.
 
 ![Module A Items](images/moduleA-items.png)
-A group of raters will be used to validate items in a level panel exercise, and ensure that they are set at the correct target difficulty level. Rating sheets are then collated and a decision then made on the CEFR rating for each item in the item bank. Various methods can be used to converge on an agreed difficulty level for each item; the simplest is to find the modal (ie. the most frequently occurring) from all your raters. Where there is no single mode, or there are wide disagreements between raters, a manual adjustment to a commonly agreed difficulty level that is close to the average may be required. Ideally at least 5 raters would be used for each item to avoid this as far as possible.
 
-Once difficulty levels are agreed, they can be used to update the item bank. Then it is a matter of assigning items to each module according to the test design.
+### Initial Validation of Item Quality
 
-### Initial Trial
+A group of raters (confusingly also called a panel of experts) will then be used to validate items in a level panel exercise, and ensure that they are set at the correct target CEFR level. Rating sheets are then collated and a decision then made on the CEFR rating for each item in the item bank. Various methods can be used to converge on an agreed CEFR level for each item; the simplest is to find the modal (ie. the most frequently occurring value) from all your raters. Where there is no single mode, or there are wide disagreements between raters, a manual adjustment to a commonly agreed CEFR level that is close to the average may be required. Ideally at least 5 raters would be used for each item to avoid this as far as possible.
 
-The purpose of the initial trial is to administer a test to a cohort of test candidates. Care should be taken to ensure that this cohort is representative of the target candidature. The test response can then be used to calibrate item difficulties using the selected IRT model. We'll use the 1PL (Rasch) model in the examples that follow. 
+Once CEFR levels are confirmed for each item, they can be used to update the item bank. Then it is a matter of assigning items to each module according to the test design.
+
+### Initial Trialling
+
+The purpose of the initial trial is to administer a test (a prototype panel) to a sample cohort of test takers Care should be taken to ensure that this cohort is representative of the target candidature.  Principles of sampling and research design will need to be carefully thought out. The actual test responses can then be used to calibrate item difficulties using the selected IRT model. We'll use the 1PL (Rasch) model in the examples that follow. 
 
 #### Import and validation of trial data
 
@@ -479,11 +492,11 @@ dfTestResponses <- read_csv('trial-data.csv')
 head(dfTestResponses[1:8])
 ```
 
-The `ltm` library can be used to fit a number of dichotomous and polytomous IRT models. It's the fastest library that I've found for fitting a Rasch model. Before doing that we get some summary statistics from the data, including the Cronbach's alpha measure of covariance. 
+The `ltm` library can be used to fit a number of dichotomous and polytomous IRT models. It's the fastest R library that we've used for fitting a Rasch model. Before doing that we get some summary statistics from the data, including the Cronbach's alpha measure of covariance. 
 
 #### Consistency and reliability
 
-We want to make sure that our modules are internally consistent and reliable as tests of a given latent trait. In our test we've grouped various skills or abilities into the different stages. So, stage 1 (ie. Module A) is designed as a test of language use, stage 2 (Modules B and C) is designed to measure reading skills, and stage 3 is designed to measure listening skills. The overall test is designed to measure English language ability in non-native learners of English.
+We want to make sure that our modules are internally consistent and reliable as tests of a given latent trait. In our test we've grouped various skills or abilities into the different stages. So, in our example, stage 1 (ie. Module A) is designed as a test of language use, stage 2 (Modules B and C) is designed to measure reading skills, and stage 3 is designed to measure listening skills. The overall test is designed to measure English language ability in non-native learners of English (regardless of age, which is a consideration that we are not covering here).
 
 Cronbach's alpha is a function of the number of items in a test, the average covariance between pairs of items, and the variance of the total score. It is defined as:
 
@@ -493,7 +506,7 @@ $$
 
 Here, $p$ is the number of items and $\bar{r}$ is the average of all covariances between items.
 
-In our test we've split our items into different modules according to the skill that is being measured, so it makes sense to calculate alphas for each module, although we could also do so by stage if we wanted. We need to make sure that we remove any rows containing NA values before calculating Cronbach's alpha.
+Since in our test we've split our items into different modules according to the skill that is being measured, so it makes sense to calculate alphas for each module, although we could also do so by stage if we wanted. We need to make sure that we remove any rows containing NA values before calculating Cronbach's alpha.
 
 ```{r Cronbachs alpha, echo=FALSE}
 # drop the Candidate column, it's not required for the IRT functions
@@ -545,7 +558,7 @@ ggplot(dfCronbachsAlpha,
     labs(x = "alpha", y = "# responses") +
     geom_vline(xintercept = 0.7, linetype="dotted")
 ```
-Ideally we're looking for alphas of 0.7 and above; less than this indicates that there is weak covariance between the items in the module, which means they may not be testing the same trait. This measure is really only useful as a guide for further investigations; the ultimate decision on whether to modify the items in each module should be taken in collaboration with the subject matter experts.
+Ideally, we're looking for alphas of 0.7 and above; less than this indicates that there is weak covariance between the items in the module, which means they may not be testing the same trait. This measure is really only useful as a guide for further investigations; the ultimate decision on whether to modify the items in each module should be taken in collaboration with the subject matter experts.
 
 ### Rasch Model
 
@@ -560,7 +573,7 @@ rasch_summary <- summary(raschmodel)
 
 ### Item Difficulty
 
-The item difficulty parameters $b_{i}$ are returned and then output to show the spread of difficulties. This is a useful way of gauging whether there are any outlier items that should be rejected. Items where there is no mix of 1s and 0s will show very extreme difficulty levels as the information for these items is extremely low.
+The item difficulty parameters $b_{i}$ are returned and then output to show the spread of difficulties. This is a useful way of gauging whether there are any outlier items that should be reviewed and possibly rejected. Items where there is no mix of 1s and 0s will show very extreme difficulty levels as the information for these items is extremely low.
 
 ```{r Item difficulties}
 df_difficulties <- rasch_summary$coefficients
@@ -578,11 +591,11 @@ ggplot(data = na.omit(df_displayDifficulties)) +
   labs(x = "items", y = "Difficulty (b)")
 ```
 
-You can see that some of the outlier items have a very large divergence from the mean; it is best to remove these items from the item bank as they have too large an error to be used in a live test.
+You can see in Figure 11 that some of the outlier items have a very large divergence from the mean; it is best to remove these items from the item bank as they have too large an error to be used in a live test.
 
 ### Banking the Updated Difficulty Parameters
 
-Once difficulty values have been calculated by fitting the Rasch model, the item bank should be updated to reflect this. The item difficulty ($b$ parameter) is a key component of the item, and should be stored along with the other information about the item. If a 2PL model is being used, then the discrimination ($a$ parameter) would also be stored.
+Once difficulty values have been calculated by fitting the Rasch model, the item bank should be updated to reflect this. The item difficulty ($b$ parameter) is a key component of the item, and should be stored along with the other information about the item (including its rated CEFR level by the subject expert panelists). If a 2PL model is being used, then the discrimination ($a$ parameter) would also be stored.
 
 ```{r Item banking}
 # output a CSV file with the item difficulties
@@ -603,13 +616,13 @@ ggplot(itemPlot, aes(x=theta, y=probability)) +
   geom_line() +
   labs(title="Item Characteristic Curve", x="theta", y="P(X=1)")
 ```
-In this example we see the item characteristic curve (ICC) for `r itemID` with difficulty $b$ = `r itemDifficulty`.
+In this example Figure 12 we see the item characteristic curve (ICC) for `r itemID` with difficulty $b$ = `r itemDifficulty`.
 
 ### Module Characteristic Curves (MCCs)
 
-You can sum the ICCs for all items in a module to get a Module Characteristic Curve (MCC) that expresses the difficulty for that module. These graphs show the relative difficulty of each module. They can be used to calibrate the modules so they are in line with the assumptions about module difficulty. The range of the difficulty of items as well as the mean module difficulty should also be taken into account.
+You can sum the ICCs for all items in a module to get a Module Characteristic Curve (MCC) that expresses the difficulty for that module. These graphs show the relative difficulty of each module. They can be used to calibrate the modules so they are in line with the assumptions about module difficulty. The range of the difficulty of items as well as the mean module difficulty should also be checked and, if necessary, adjusted.
 
-First we'll create a helper function called `trueScoreSummary` to help get the plot data from the `ltm` package into the format we can use for visualisations with ggplot.
+First we'll create a helper function called `trueScoreSummary` to convert the plot data we get from the `ltm` package into a format we can use for visualisations with `ggplot`.
 
 
 ```{r IRT helper functions}
@@ -630,7 +643,7 @@ informationCoefficients <- function(plotData, module=NA) {
 }
 ```
 
-We get the indices of the module A items and then create the plotting data before passing this to ggplot.
+We get the indices of the module A items and then create the plotting data before graphing it.
 
 ```{r Stage 1 MCC}
 moduleA1_items <- which(colnames(dfTrial) %in% colnames(dfModuleAItems))
@@ -642,7 +655,6 @@ ggplot(plotData, aes(x=theta, y=trueScore)) +
   geom_line() +
   labs(title="Module Characteristic Curve", x="theta", y="True Score")
 ```
-You can read this off such that a candidate who scores 9 in module A would have an estimated ability score, or $\hat{\theta}$, of approximately 1.92.
 
 We can go on to compare the MCCs for the stage 2 modules:
 
@@ -658,7 +670,7 @@ ggplot(plotData, aes(x=theta, y=trueScore)) +
   geom_line(aes(colour=module)) +
   labs(title="Module Characteristic Curve", x="theta", y="True Score")
 ```
-A problem we can see already here is that these curves look too straight - ideally there should be a nice sigmoid shape to them. These MCCs have a low information content - in other words they are not very discriminating. We may want to move some items between modules, or reject items that have poor discrimination.
+Looking at Figure 14, a problem we can already see is that these curves look very straight - ideally there should be a nice sigmoid shape to them. These MCCs have a low information content - in other words they are not very discriminating. We may want to move some items between modules, or reject items that have poor discrimination, or even go back to the drawing board and add some more quality items.
 
 And for the modules in stage 3:
 
@@ -678,25 +690,29 @@ ggplot(plotData, aes(x=theta, y=trueScore)) +
   geom_line(aes(colour=module)) +
   labs(title="Module Characteristic Curve", x="theta", y="True Score")
 ```
-This is already showing us something a little weird. Our E (easy) module is actually a little bit more difficult than our F (hard) module. All of the modules are quite similar in terms of difficulty (the MCCs are quite close to each other), and moreover the lines are quite flat - there is little discrimination between them.
+Something that we see here that is odd is that our module E (easy) is actually a little bit more difficult than our module F (hard). Also all of the modules are quite similar in terms of difficulty (the MCCs are quite close to each other), and moreover the lines are quite flat - there is little discrimination between them. Again we may want to look at moving some items between modules, or rejecting items with poor discrimination,
 
 ## Cut scores and scale scores
 
-In this section we'll show how to use the Module Information Function (MIF) to derive cut scores for module progression, and also how to build a scale scoring system for the test. First we'll cover the topic of deriving scale scores for each module and then for the test.
+In this section, we'll show how to use the Module Information Function (MIF) to derive cut scores for module progression, and also how to build a scale scoring system for the test. First, we'll cover the topic of deriving scale scores for each module and then for the test.
 
 ### Scale Scores for Test Reporting
 
-We could provide candidates with their $\hat{\theta}$ at test end but most candidates and testing organisations do not like theta values and the concept of zero as the population mean is difficult for most people. We therefore need to convert the theta value into a scale score. This usually involves fitting the theta to a range that is acceptable to the testing body (for example a score in the range 20-80).
+We could provide candidates with their $\hat{\theta}$ at test end but most candidates and testing organisations do not like theta values and the concept of zero as the population mean and negative ability values are difficult for most people to conceptualise. We therefore need to convert the theta value into a scale score. This usually involves fitting the theta to a range that is chosen by the testing body and acceptable for its stakeholders (for example a score in the range 20-80).
 
-Before we get to that point however we'll cover the case where the test administration system is unable to calculate the theta estimate and we need to provide a true score to scale score mapping. We do this by first converting true score to theta estimate, and then mapping the theta estimate on to a scale score. True score is simply the number correct for a given module.
+Before we get to that point however we'll cover the case where the test administration system is unable to calculate the theta estimate and we need to provide a true score to scale score mapping. We do this by first converting true score to theta estimate, and then mapping the theta estimate on to a scale score. True score is simply the number correct (NC) for a given module.
 
 #### Converting True Score to Theta
 
-Recall that the MCCs provide a mapping from the number of correct scores for each module to $\hat{\theta}$. A quintic polynomial can be used to fit the MCC, and the resulting coefficients then used by the test administration system to provide an ability estimate at the end of each module. The scale scores can then be used to provide an aggregated test score once the final stage of the MST has completed.
+Recall that the MCCs provide a mapping from the number of correct scores for each module to an ability estimate: $\hat{\theta}$. A quintic polynomial can be used to fit the MCC, and the resulting coefficients of this polynomial function can then used by the test administration system to provide an ability estimate at the end of each module. The scale scores can then be used to provide an aggregated test score once the final stage of the MST has completed.
+
+Effectively we use a polynomial regression to map the non-linear relationship between the number correct that a candidate scores and the ability estimate based on the items in that module. This is possible because of the direct summative relationship between ICCs and MCCs to derive ability estimates. You may ask why do we need to go to the trouble of fitting a seperate regression to what is a effectively a sum of logistic regressions? The difficulty here arises for test administration systems where the item difficulties are unknown (because access to these values from the item bank is unavailable), or the system is not capable of using the IRT functions to compute the ICCs and MCCs from the item parameters. The number of possible values is limited anyway (the number correct value for a module will be $n + 1$, where $n$ is the number of items in the module), so another approach is to simply store the NC to ability estimate equivalences in a table for lookup during test administration.
+
+An further approach that is interesting is the use of the D-Scoring method (see @han2019developing). We have not had time to undertake a full investigation of the D-Scoring method, but it is certainly something we intend to look at in a future article.
 
 #### Module A Mapping Function
 
-We'll use a polynomial regression to fit a set of coefficients to the MCC.
+Here we show how to use a polynomial regression to fit a set of coefficients to the MCC.
 
 ```{r Module A True Scores, echo=FALSE}
 df_moduleA_TS <- trueScoreSummary(plot(raschmodel, type = "ICC", items = moduleA1_items, plot = FALSE))
@@ -708,7 +724,7 @@ lm_moduleA_scores_poly <- lm(theta ~ poly(trueScore, degree=5, raw=TRUE), data =
 summary(lm_moduleA_scores_poly)
 ```
 
-The model looks good for our use. From this we can get the coefficients (terms) that will be used for the polynomial function.
+The low p-values indicate that this is a useful model for our use. From here we pull out the coefficients (terms) that will be used for the polynomial function.
 
 ```{r Module A True Score Function}
 gA_coeffs <- unname(coef(lm_moduleA_scores_poly))
@@ -716,7 +732,7 @@ gA_coeffs <- unname(coef(lm_moduleA_scores_poly))
 (gA_coeffs)
 ```
 
-The test development team, when they want to calculate the ability for a candidate could use such a function to map from the number correct (NC) score to an estimated theta for candidate $i$: $\hat\theta_i$. For example, using an R function this would be:
+In order to calculate the ability for a candidate, such a function can be used to map from the number correct (NC) score to an estimated theta for candidate $i$, $\hat\theta_i$. The function $g_A()$ that will be used for module A could be written in R function like this:
 
 ```{r}
 gA <- function(x) {
@@ -724,11 +740,11 @@ gA <- function(x) {
 }
 ```
 
-So, a candidate who scores 9 out of 12 on module A would have a $\hat\theta$ = `r gA(9)`.
+The parameter `x` is the NC score. So, a candidate who scores 9 out of 12 on module A would have a $\hat\theta$ = `r gA(9)`.
 
 #### Validating the Mapping Function
 
-We can now use this function to overlay the original MCC:
+We saw previously that the low p-value for the polynomial regression indicates a very good fit to the MCC. We can show this visually by overlaying the data points derived from the $g_A()$ function onto the original MCC for module A:
 
 ```{r}
 df_gA <- data.frame(
@@ -745,13 +761,15 @@ ggplot(df_moduleA_TS, aes(x = theta, y = trueScore)) +
   scale_y_continuous(name="True Score", limits=c(0, 12), 
                      minor_breaks = NULL, n.breaks = 12)
 ```
-We can see that it is a good fit, both in the middle of the range, and importantly at the upper and lower bounds.
+We can see that it is a good fit - the black dots that are dervied from applying $g_A()$ to each possible true score show very little error from the original MCC (red dotted line). This is true both in the middle of the range, and importantly at the upper and lower bounds.
 
 We then need to go through each module in every panel and create a true score mapping function for each. These functions, or the lookup-tables that they can be used to generate, will then need to be provided to the developers of the test delivery software so that they can be used to calculate theta estimates and scale scores for each module.
 
 #### Scale Scoring Function
 
-A scale score function can then be created to map the $\hat{\theta}$ to a score that will be reported back to the candidate and the testing institute. Typically a summary of capability such as a CEFR rating will also be provided with the scale score.
+A scale score function can then be created to map the $\hat{\theta}$ to a score that will be reported back to the candidate and the testing institute. We'll see an example later in this section. 
+
+At the end of the test the test taker will typically be provided with a summary of competence such as a CEFR band achieved. They will also most likely be provided with some illustrative descriptors, along with the scale score.
 
 The test administrators may want to create different scale score functions for each stage of the MST, although the simplest approach is to just have a single one. A straightforward scaling function to use is to simply normalise the ability estimate for a candidate to a range 0-1 and then apply a multiplier constant $k$:
 
@@ -776,7 +794,7 @@ More complex scaling functions that use additional terms can also be used to tai
 
 ### Cut scores for routing
 
-We use the concept of the information function as a way of determining the best cut scores to use. Where a choice is needed to route onward to the next stage, we need to select a cut score to use. We could do this by simply selecting a mid-point in the true scale. For example, if the routing module A has 12 items, then we might assume that if a candidate scores 0-5 they route to the easy module in the next stage (module B), and if they score 6-12 they route to the harder module (module C). Ideally though we'd like to base this on the results of the Rasch analysis. Using the Item Information Function (IIF) gives us a way of selecting a cut score based on IRT. First lets explain the Item Informtation Function.
+We use the concept of the information function as a way of determining the best cut scores to use. Where a choice is needed to route onward to the next stage, we need to select a cut score to use. We could do this by simply selecting a mid-point in the true scale. For example, if the routing Module A has 12 items, then we might assume that if a candidate scores 0-5 they route to the easy module in the next stage (Module B), and if they score 6-12 they route to the harder module (Module C). Ideally though we'd like to base this on the results of the Rasch analysis. Using the Item Information Function (IIF) gives us a way of selecting a cut score based on IRT. First lets explain the Item Informtation Function.
 
 #### Item Information Functions (IIFs)
 
@@ -799,9 +817,9 @@ For example this item shows a peak information for $\hat{\theta} =$ `r itemPlot$
 
 Just as with the ICC-MCC relationship, its possible to sum a set of IIFs into a Module Information Function (MIF).
 
-Routing between modules can then determined by cut scores derived from the intersection of information functions for the modules in the next stage. We should aim to place the cut score to be that at which the MIFs intersect.
+Routing between modules can then be determined by cut scores derived from the intersection of information functions for the modules in the next stage. We should aim to place the cut score at the location where the MIFs intersect.
 
-Let's look at the MIFs for the two stage 2 modules:
+To see an example of this let's look at the MIFs for the two stage 2 modules:
 
 ```{r Stage 2 MIFs}
 iifB <- informationCoefficients(plot(raschmodel, type = "IIC", 
@@ -827,12 +845,12 @@ ggplot(plotData, aes(x=theta, y=information)) +
 
 cutScore <- round(df_moduleA_TS$trueScore[which.min(abs(df_moduleA_TS$theta - cutTheta))])
 ```
-Here we can see that there is point of intersection between modules B and C where the ability estimate is `r cutTheta`. If we read off the true score value that is equivalent for this theta estimate in Module A, then we can use this as the cut score; in this case the (rounded) true score is `r cutScore`.
+Here in Figure 18 we can see that there is a point of intersection between Modules B and C where the ability estimate is `r cutTheta`. If we read off the true score value that is equivalent for this theta estimate in Module A, then we can use this as the cut score; in this case the (rounded) true score is `r cutScore`.
 
 # Summary
 
-We've seen how to take a test from the design stage to validation of the items, Rasch analysis, banking of difficulties, functions for calculation of ability estimates and scale scores, and finally calculation of the cut scores that will be used for routing.
+We've seen how to take a test from the design stage to validation of the items, Rasch analysis, banking of item difficulties, functions for calculation of ability estimates and scale scores, and finally calculation of the cut scores that will be used for routing.
 
-Once this information has been calculated and provided to the test administrators so that they can build it in to the test delivery system the test is theoretically ready for delivery. It is usual at this stage to run a further pilot to iron out any operational issues.
+Once this information has been calculated and provided to the software engineers of the computerised test delivery platform it is then available to the test delivery system and the test is theoretically ready for delivery. It is usual at this stage to run a further larger scale field test (trial) to iron out any operational issues.
 
 # References
